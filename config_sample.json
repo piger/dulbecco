@@ -1,0 +1,23 @@
+{
+    "configuration": {
+        "nickname": "pinolo",
+        "altnicknames": ["pinolo_", "pinolo__", "pinolo^"],
+        "username": "pinolo",
+        "realname": "Pinot di pinolo",
+        "servers": [
+            {
+                "name": "localhost",
+                "address": "localhost:6667",
+                "ssl": false,
+                "nickname": "PINOLO"
+            }
+        ],
+        "plugins": [
+            {
+                "name": "uname",
+                "command": "/usr/bin/uname -a",
+                "trigger": "!uname"
+            }
+        ]
+    }
+}

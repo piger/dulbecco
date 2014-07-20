@@ -59,6 +59,7 @@ func (c *Connection) SetupCallbacks() {
 
 	c.AddCallback("INIT", c.h_INIT)
 	c.AddCallback("001", c.h_001)
+	c.AddCallback("PRIVMSG", c.h_PRIVMSG)
 }
 
 
@@ -73,4 +74,8 @@ func (c *Connection) h_INIT(message *Message) {
 // "Connected" event upon receiving numeric 001
 func (c *Connection) h_001(message *Message) {
 	c.Join("#puzza")
+}
+
+func (c *Connection) h_PRIVMSG(message *Message) {
+	c.Privmsg(message.Nick, "ciao a te")
 }

@@ -1,35 +1,39 @@
 package dulbecco
 
 import (
-	"crypto/tls"
-	"net"
 	"bufio"
+	"crypto/tls"
+	"fmt"
 	"log"
+	"net"
 	"strings"
 	"time"
 )
-
 
 type Connection struct {
 	address string
 
 	username, realname, nickname string
-	altnicknames []string
+	altnicknames                 []string
+
+	// ping frequency
+	pingFreq time.Duration
 
 	// IO
-	sock net.Conn
-	io *bufio.ReadWriter
-	in chan *Message
-	out chan string
+	sock      net.Conn
+	io        *bufio.ReadWriter
+	in        chan *Message
+	out       chan string
 	Connected bool
 
 	// SSL
-	useTLS bool
+	useTLS    bool
 	sslConfig *tls.Config
 
 	// Control channels
 	cWrite chan bool
 	cEvent chan bool
+	cPing  chan bool
 
 	// callbacks
 	events map[string]map[string]func(*Message)
@@ -56,17 +60,19 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType) *Connect
 	}
 
 	conn := &Connection{
-		address: srvConfig.Address,
-		useTLS: srvConfig.Ssl,
-		sslConfig: nil,
-		username: username,
-		realname: realname,
-		nickname: nickname,
+		address:      srvConfig.Address,
+		useTLS:       srvConfig.Ssl,
+		sslConfig:    nil,
+		pingFreq:     3 * time.Minute,
+		username:     username,
+		realname:     realname,
+		nickname:     nickname,
 		altnicknames: altnicknames,
-		in: make(chan *Message, 32),
-		out: make(chan string, 32),
-		cWrite: make(chan bool),
-		cEvent: make(chan bool),
+		in:           make(chan *Message, 32),
+		out:          make(chan string, 32),
+		cWrite:       make(chan bool),
+		cEvent:       make(chan bool),
+		cPing:        make(chan bool),
 	}
 
 	conn.SetupCallbacks()
@@ -80,6 +86,7 @@ func (c *Connection) Connect() error {
 			c.sock = s
 		} else {
 			return err
+		}
 	} else {
 		if s, err := net.Dial("tcp", c.address); err == nil {
 			c.sock = s
@@ -98,6 +105,7 @@ func (c *Connection) Connect() error {
 
 	go c.writeLoop()
 	go c.readLoop()
+	go c.pingLoop()
 	go c.eventLoop()
 
 	return nil
@@ -106,9 +114,9 @@ func (c *Connection) Connect() error {
 func (c *Connection) writeLoop() {
 	for {
 		select {
-		case line := <- c.out:
+		case line := <-c.out:
 			c.write(line)
-		case <- c.cWrite:
+		case <-c.cWrite:
 			return
 		}
 	}
@@ -136,10 +144,23 @@ func (c *Connection) readLoop() {
 	}
 }
 
+func (c *Connection) pingLoop() {
+	tick := time.NewTicker(c.pingFreq)
+
+	for {
+		select {
+		case <-tick.C:
+			c.Raw(fmt.Sprintf("PING :%d", time.Now().UnixNano()))
+		case <-c.cPing:
+			return
+		}
+	}
+}
+
 func (c *Connection) eventLoop() {
 	for {
 		select {
-		case message := <- c.in:
+		case message := <-c.in:
 			c.RunCallbacks(message)
 		case <-c.cEvent:
 			return
@@ -171,6 +192,7 @@ func (c *Connection) shutdown() {
 		c.sock.Close()
 		c.cWrite <- true
 		c.cEvent <- true
+		c.cPing <- true
 
 		c.io = nil
 		c.sock = nil

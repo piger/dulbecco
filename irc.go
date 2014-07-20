@@ -1,6 +1,7 @@
 package dulbecco
 
 import (
+	"crypto/tls"
 	"net"
 	"bufio"
 	"log"
@@ -11,7 +12,6 @@ import (
 
 type Connection struct {
 	address string
-	useTLS bool
 
 	username, realname, nickname string
 	altnicknames []string
@@ -22,6 +22,10 @@ type Connection struct {
 	in chan *Message
 	out chan string
 	Connected bool
+
+	// SSL
+	useTLS bool
+	sslConfig *tls.Config
 
 	// Control channels
 	cWrite chan bool
@@ -54,6 +58,7 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType) *Connect
 	conn := &Connection{
 		address: srvConfig.Address,
 		useTLS: srvConfig.Ssl,
+		sslConfig: nil,
 		username: username,
 		realname: realname,
 		nickname: nickname,
@@ -70,10 +75,17 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType) *Connect
 }
 
 func (c *Connection) Connect() error {
-	if s, err := net.Dial("tcp", c.address); err == nil {
-		c.sock = s
+	if c.useTLS {
+		if s, err := tls.Dial("tcp", c.address, c.sslConfig); err == nil {
+			c.sock = s
+		} else {
+			return err
 	} else {
-		return err
+		if s, err := net.Dial("tcp", c.address); err == nil {
+			c.sock = s
+		} else {
+			return err
+		}
 	}
 
 	log.Println("Connected!\n")

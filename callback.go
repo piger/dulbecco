@@ -77,5 +77,9 @@ func (c *Connection) h_001(message *Message) {
 }
 
 func (c *Connection) h_PRIVMSG(message *Message) {
-	c.Privmsg(message.Nick, "ciao a te")
+	if message.InChannel() {
+		c.Privmsg(message.Args[0], message.Nick + " ciao a te")
+	} else {
+		c.Privmsg(message.Nick, "ehy ciao")
+	}
 }

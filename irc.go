@@ -1,6 +1,7 @@
 package dulbecco
 
 import (
+	"sync"
 	"bufio"
 	"crypto/tls"
 	"fmt"
@@ -33,6 +34,9 @@ type Connection struct {
 	in        chan *Message
 	out       chan string
 	Connected bool
+
+	// lock shutdown calls
+	mutex sync.Mutex
 
 	// SSL
 	useTLS    bool
@@ -224,6 +228,8 @@ func (c *Connection) rateLimit(chars int) time.Duration {
 }
 
 func (c *Connection) shutdown() {
+	c.mutex.Lock()
+
 	if c.Connected {
 
 		log.Println("shutting down connection")
@@ -236,4 +242,5 @@ func (c *Connection) shutdown() {
 		c.io = nil
 		c.sock = nil
 	}
+	c.mutex.Unlock()
 }

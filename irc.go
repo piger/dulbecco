@@ -1,13 +1,13 @@
 package dulbecco
 
 import (
-	"sync"
 	"bufio"
 	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -46,12 +46,13 @@ type Connection struct {
 	cWrite chan bool
 	cEvent chan bool
 	cPing  chan bool
+	CQuit   chan bool
 
 	// callbacks
 	events map[string]map[string]func(*Message)
 }
 
-func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType) *Connection {
+func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit chan bool) *Connection {
 	// get configuration values from the server config object, falling back
 	// to the global config.
 	var nickname, username, realname string
@@ -90,6 +91,7 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType) *Connect
 		floodProtection: true,
 		badness:         0,
 		lastSent:        time.Now(),
+		CQuit:            quit,
 	}
 
 	// setup internal callbacks
@@ -147,8 +149,8 @@ func (c *Connection) readLoop() {
 	for {
 		line, err := c.io.ReadString('\n')
 		if err != nil {
-			log.Println("read failed: ", err)
-			c.shutdown()
+			log.Println("read failed:", err)
+			go c.shutdown()
 			return
 		}
 
@@ -199,13 +201,13 @@ func (c *Connection) write(line string) {
 
 	if _, err := c.io.WriteString(line + "\r\n"); err != nil {
 		log.Println("write failed: ", err)
-		c.shutdown()
+		go c.shutdown()
 		return
 	}
 
 	if err := c.io.Flush(); err != nil {
 		log.Println("flush failed: ", err)
-		c.shutdown()
+		go c.shutdown()
 		return
 	}
 
@@ -229,10 +231,11 @@ func (c *Connection) rateLimit(chars int) time.Duration {
 
 func (c *Connection) shutdown() {
 	c.mutex.Lock()
+	log.Println("enter shutdown()")
 
 	if c.Connected {
-
 		log.Println("shutting down connection")
+
 		c.Connected = false
 		c.sock.Close()
 		c.cWrite <- true
@@ -241,6 +244,11 @@ func (c *Connection) shutdown() {
 
 		c.io = nil
 		c.sock = nil
+
+		c.RunCallbacks(&Message{Cmd: "DISCONNECT"})
+		c.CQuit <- true
+		log.Println("end of shutdown")
 	}
 	c.mutex.Unlock()
+	log.Println("exit shutdown()")
 }

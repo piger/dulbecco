@@ -7,9 +7,9 @@ import (
 )
 
 
-// Struct containing the incoming data.
-// Src => "irc.example.com" or "nick!ident@host"
-// Raw => "nick!ident@host PRIVMSG #channel :hello world"
+// Each line from the IRC server is parsed into a Message struct.
+//   Src => "irc.example.com" or "nick!ident@host"
+//   Raw => "nick!ident@host PRIVMSG #channel :hello world"
 type Message struct {
 	Ident, Nick, Host, Src string
 
@@ -22,6 +22,17 @@ func (m *Message) Dump() {
 	fmt.Printf("%+v\n", m)
 }
 
+// Returns true if the Message generated inside a IRC channel
+// Channel types: https://www.alien.net.au/irc/chantypes.html
+func (m *Message) InChannel() bool {
+	if len(m.Args) > 0 && len(m.Args[0] > 0) {
+		return strings.ContainsAny(string(m.Args[0][0]), "&#!+.~")
+	}
+
+	return false
+}
+
+// Parse a line from the IRC server into a Message struct.
 func parseMessage(s string) *Message {
 	message := &Message{Raw: s}
 

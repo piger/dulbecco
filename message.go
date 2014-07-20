@@ -25,7 +25,7 @@ func (m *Message) Dump() {
 // Returns true if the Message generated inside a IRC channel
 // Channel types: https://www.alien.net.au/irc/chantypes.html
 func (m *Message) InChannel() bool {
-	if len(m.Args) > 0 && len(m.Args[0] > 0) {
+	if len(m.Args) > 0 && len(m.Args[0]) > 0 {
 		return strings.ContainsAny(string(m.Args[0][0]), "&#!+.~")
 	}
 

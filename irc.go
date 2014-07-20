@@ -24,6 +24,7 @@ type Connection struct {
 
 	// Control channels
 	cWrite chan bool
+	cEvent chan bool
 
 	// callbacks
 	events map[string]map[string]func(*Message)
@@ -40,6 +41,7 @@ func NewConnection(address, nickname string) *Connection {
 		in: make(chan *Message, 32),
 		out: make(chan string, 32),
 		cWrite: make(chan bool),
+		cEvent: make(chan bool),
 	}
 
 	conn.SetupCallbacks()
@@ -64,6 +66,7 @@ func (c *Connection) Connect() error {
 
 	go c.writeLoop()
 	go c.readLoop()
+	go c.eventLoop()
 
 	return nil
 }
@@ -100,6 +103,17 @@ func (c *Connection) readLoop() {
 	}
 }
 
+func (c *Connection) eventLoop() {
+	for {
+		select {
+		case message := <- c.in:
+			c.RunCallbacks(message)
+		case <-c.cEvent:
+			return
+		}
+	}
+}
+
 func (c *Connection) write(line string) {
 	if _, err := c.io.WriteString(line + "\r\n"); err != nil {
 		log.Println("write failed: ", err)
@@ -123,6 +137,7 @@ func (c *Connection) shutdown() {
 		c.Connected = false
 		c.sock.Close()
 		c.cWrite <- true
+		c.cEvent <- true
 
 		c.io = nil
 		c.sock = nil

@@ -58,6 +58,7 @@ func (c *Connection) SetupCallbacks() {
 	c.events = make(map[string]map[string]func(*Message))
 
 	c.AddCallback("INIT", c.h_INIT)
+	c.AddCallback("001", c.h_001)
 }
 
 
@@ -67,4 +68,9 @@ func (c *Connection) h_INIT(message *Message) {
 
 	c.Nick(c.nickname)
 	c.User(c.username, c.realname)
+}
+
+// "Connected" event upon receiving numeric 001
+func (c *Connection) h_001(message *Message) {
+	c.Join("#puzza")
 }

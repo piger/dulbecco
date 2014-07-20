@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# = PRCD =
+#
+# Print a random prcd, optionally piping it through our beloved cows.
+
+DATA_DIR=$(dirname $0)
+PRCD_FILES="prcd_cri.txt prcd_dio.txt prcd_ges.txt prcd_mad.txt prcd_mtc.txt prcd_pap.txt prcd_vsf.txt"
+
+if [[ $1 = "-cow"* ]]; then
+	if which cowsay &>/dev/null; then
+		OUT="cowsay"
+	else
+		OUT="cat"
+	fi
+else
+	OUT="cat"
+fi
+
+{ for f in $PRCD_FILES; do cat $DATA_DIR/$f; done } | \
+	 perl -e 'srand; rand($.) < 1 && ($line = $_) while <>; print "$line";' | \
+	eval $OUT

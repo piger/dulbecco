@@ -1,11 +1,13 @@
 package dulbecco
 
 import (
+	"log"
 	"fmt"
 	"strings"
 	"reflect"
 	"math/rand"
 	"crypto/sha1"
+	"os/exec"
 )
 
 func (c *Connection) AddCallback(name string, callback func(*Message)) string {
@@ -60,6 +62,7 @@ func (c *Connection) SetupCallbacks() {
 	c.AddCallback("INIT", c.h_INIT)
 	c.AddCallback("001", c.h_001)
 	c.AddCallback("PRIVMSG", c.h_PRIVMSG)
+	c.AddCallback("PRIVMSG", c.h_EXEC)
 }
 
 
@@ -79,9 +82,32 @@ func (c *Connection) h_001(message *Message) {
 
 // PRIVMSG: test callback
 func (c *Connection) h_PRIVMSG(message *Message) {
+	if !strings.HasPrefix(message.Args[1], c.nickname) {
+		return
+	}
+
 	if message.InChannel() {
 		c.Privmsg(message.Args[0], message.Nick + " ciao a te")
 	} else {
 		c.Privmsg(message.Nick, "ehy ciao")
+	}
+}
+
+// PRIVMSG: execute() test
+func (c *Connection) h_EXEC(message *Message) {
+	if !strings.HasPrefix(message.Args[1], "!cmd") {
+		return
+	}
+
+	cmd := exec.Command("/bin/ps")
+	out, err := cmd.Output()
+	if err != nil {
+		log.Println("ERROR executing command:", err)
+	} else {
+		lines := strings.Trim(string(out), "\n")
+
+		for _, line := range strings.Split(lines, "\n") {
+			c.Privmsg(message.Args[0], message.Nick + ": " + line)
+		}
 	}
 }

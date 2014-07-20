@@ -83,6 +83,11 @@ def main():
 
     command = args[0]
     args = ' '.join(args[1:])
+    if not args:
+        args = os.environ.get('IRC_ARGS') or ''
+        # skip over the first word, which should be the IRC "command",
+        # i.e. "!addq"
+        _, args = args.split(' ', 1)
 
     conn = init_db(db_file)
     rv = 0
@@ -92,6 +97,8 @@ def main():
         if args:
             author = os.environ.get('IRC_NICKNAME', 'unknown')
             rv = add_quote(conn, author, args)
+        else:
+            parser.error("You must specify a quote to add")
 
     conn.close()
     sys.exit(rv)

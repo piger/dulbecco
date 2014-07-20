@@ -1,0 +1,3 @@
+plugins/prcd/*.txt
+*.sqlite
+config.json

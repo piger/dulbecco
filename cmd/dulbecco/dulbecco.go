@@ -18,16 +18,17 @@ func main() {
 
 	config := dulbecco.ReadConfig(*configFile)
 	// fmt.Printf("%+v\n", config)
+	var connections []dulbecco.Connection
 
 	for _, server := range config.Servers {
 		fmt.Printf("server config: %+v\n", server)
-	}
-	
 
-	conn := dulbecco.NewConnection("127.0.0.1:6667", "dulbecco")
-	err := conn.Connect()
-	if err != nil {
-		fmt.Printf("error: %s\n", err)
+		conn := dulbecco.NewConnection(&server, config)
+		if err := conn.Connect(); err != nil {
+			fmt.Printf("error connecting to server: %s\n", err)
+			return
+		}
+		connections = append(connections, *conn)
 	}
 
 	c := make(chan os.Signal, 1)

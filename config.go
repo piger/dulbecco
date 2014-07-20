@@ -13,7 +13,7 @@ type jsonobject struct {
 type ConfigurationType struct {
 	Nickname string
 	Altnicknames []string
-	Ident string
+	Username string
 	Realname string
 	Servers []ServerType
 }
@@ -21,11 +21,10 @@ type ConfigurationType struct {
 type ServerType struct {
 	Name string
 	Address string
-	Port int
 	Ssl bool
 	Nickname string
 	Altnicknames []string
-	Ident string
+	Username string
 	Realname string
 }
 

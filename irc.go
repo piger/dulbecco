@@ -13,7 +13,8 @@ type Connection struct {
 	address string
 	useTLS bool
 
-	username, realname, nickname, altnickname string
+	username, realname, nickname string
+	altnicknames []string
 
 	// IO
 	sock net.Conn
@@ -30,14 +31,33 @@ type Connection struct {
 	events map[string]map[string]func(*Message)
 }
 
-func NewConnection(address, nickname string) *Connection {
+func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType) *Connection {
+	var nickname, username, realname string
+	var altnicknames []string
+
+	if nickname = srvConfig.Nickname; len(nickname) == 0 {
+		nickname = genConfig.Nickname
+	}
+	if username = srvConfig.Username; len(username) == 0 {
+		username = genConfig.Username
+	}
+	if realname = srvConfig.Realname; len(realname) == 0 {
+		realname = genConfig.Realname
+	}
+
+	if len(srvConfig.Altnicknames) > 0 {
+		altnicknames = append(altnicknames, srvConfig.Altnicknames...)
+	} else {
+		altnicknames = append(altnicknames, genConfig.Altnicknames...)
+	}
+
 	conn := &Connection{
-		address: address,
-		useTLS: false,
-		username: "dulbecco",
-		realname: "Pinot di pinolo",
+		address: srvConfig.Address,
+		useTLS: srvConfig.Ssl,
+		username: username,
+		realname: realname,
 		nickname: nickname,
-		altnickname: "dulbecco_",
+		altnicknames: altnicknames,
 		in: make(chan *Message, 32),
 		out: make(chan string, 32),
 		cWrite: make(chan bool),

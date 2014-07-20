@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"os/exec"
 	"reflect"
 	"strings"
@@ -85,6 +86,17 @@ func (c *Connection) addPluginCallback(plugin PluginType) {
 
 		cmds := strings.Fields(plugin.Command)
 		cmd := exec.Command(cmds[0], cmds[1:]...)
+		env := []string{
+			"IRC_NICKNAME=" + message.Nick,
+			"IRC_HOST=" + message.Host,
+			"IRC_IDENT=" + message.Ident,
+			"IRC_ARGS=" + strings.Join(message.Args, " "),
+			"IRC_COMMAND=" + message.Cmd,
+			"IRC_TIMESTAMP=" + message.Time.String(),
+			"IRC_RAW=" + message.Raw,
+		}
+		cmd.Env = append(os.Environ(), env...)
+
 		if out, err := cmd.Output(); err == nil {
 			lines := strings.Trim(string(out), "\n")
 			for _, line := range strings.Split(lines, "\n") {

@@ -1,13 +1,13 @@
 package dulbecco
 
 import (
-	"log"
-	"fmt"
-	"strings"
-	"reflect"
-	"math/rand"
 	"crypto/sha1"
+	"fmt"
+	"log"
+	"math/rand"
 	"os/exec"
+	"reflect"
+	"strings"
 )
 
 func (c *Connection) AddCallback(name string, callback func(*Message)) string {
@@ -22,6 +22,7 @@ func (c *Connection) AddCallback(name string, callback func(*Message)) string {
 	hash.Write(rawId)
 	id := fmt.Sprintf("%x", hash.Sum(nil))
 	c.events[name][id] = callback
+	log.Println("Registered callback:", id)
 	return id
 }
 
@@ -43,14 +44,14 @@ func (c *Connection) RemoveCallback(name string, id string) bool {
 
 func (c *Connection) RunCallbacks(message *Message) {
 	if callbacks, ok := c.events[message.Cmd]; ok {
-		for _, callback := range(callbacks) {
+		for _, callback := range callbacks {
 			go callback(message)
 		}
 	}
 
 	// catch-all handlers
 	if callbacks, ok := c.events["*"]; ok {
-		for _, callback := range(callbacks) {
+		for _, callback := range callbacks {
 			go callback(message)
 		}
 	}
@@ -62,9 +63,36 @@ func (c *Connection) SetupCallbacks() {
 	c.AddCallback("INIT", c.h_INIT)
 	c.AddCallback("001", c.h_001)
 	c.AddCallback("PRIVMSG", c.h_PRIVMSG)
-	c.AddCallback("PRIVMSG", c.h_EXEC)
 }
 
+func (c *Connection) SetupPlugins(plugins []PluginType) {
+	for _, plugin := range plugins {
+		log.Println("Adding callback for plugin:", plugin.Name)
+		c.addPluginCallback(plugin)
+	}
+}
+
+// Add a callback for a plugin.
+// We use a separate method because we need a "copy" of the "plugin" variable,
+// since it will be bound inside the closure.
+func (c *Connection) addPluginCallback(plugin PluginType) {
+	c.AddCallback("PRIVMSG", func(message *Message) {
+		if !strings.HasPrefix(message.Args[1], plugin.Trigger) {
+			return
+		}
+
+		log.Println("Running plugin:", plugin.Name)
+
+		cmds := strings.Fields(plugin.Command)
+		cmd := exec.Command(cmds[0], cmds[1:]...)
+		if out, err := cmd.Output(); err == nil {
+			lines := strings.Trim(string(out), "\n")
+			for _, line := range strings.Split(lines, "\n") {
+				c.Privmsg(message.Args[0], line)
+			}
+		}
+	})
+}
 
 // callbacks
 
@@ -87,27 +115,8 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 	}
 
 	if message.InChannel() {
-		c.Privmsg(message.Args[0], message.Nick + " ciao a te")
+		c.Privmsg(message.Args[0], message.Nick+" ciao a te")
 	} else {
 		c.Privmsg(message.Nick, "ehy ciao")
-	}
-}
-
-// PRIVMSG: execute() test
-func (c *Connection) h_EXEC(message *Message) {
-	if !strings.HasPrefix(message.Args[1], "!cmd") {
-		return
-	}
-
-	cmd := exec.Command("/bin/ps")
-	out, err := cmd.Output()
-	if err != nil {
-		log.Println("ERROR executing command:", err)
-	} else {
-		lines := strings.Trim(string(out), "\n")
-
-		for _, line := range strings.Split(lines, "\n") {
-			c.Privmsg(message.Args[0], message.Nick + ": " + line)
-		}
 	}
 }

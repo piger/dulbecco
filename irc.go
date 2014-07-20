@@ -90,6 +90,7 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType) *Connect
 
 	// setup internal callbacks
 	conn.SetupCallbacks()
+	conn.SetupPlugins(genConfig.Plugins)
 
 	return conn
 }
@@ -110,7 +111,7 @@ func (c *Connection) Connect() error {
 		}
 	}
 
-	log.Println("Connected to %s\n", c.address)
+	log.Println("Connected to:", c.address)
 	c.Connected = true
 
 	c.io = bufio.NewReadWriter(

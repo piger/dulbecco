@@ -16,6 +16,7 @@ type ConfigurationType struct {
 	Username     string
 	Realname     string
 	Servers      []ServerType
+	Plugins      []PluginType
 }
 
 type ServerType struct {
@@ -26,6 +27,12 @@ type ServerType struct {
 	Altnicknames []string
 	Username     string
 	Realname     string
+}
+
+type PluginType struct {
+	Name    string
+	Command string
+	Trigger string
 }
 
 func ReadConfig(filename string) *ConfigurationType {

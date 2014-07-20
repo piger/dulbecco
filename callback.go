@@ -110,7 +110,10 @@ func (c *Connection) h_001(message *Message) {
 
 // PRIVMSG: test callback
 func (c *Connection) h_PRIVMSG(message *Message) {
-	if !strings.HasPrefix(message.Args[1], c.nickname) {
+	if (strings.HasPrefix(message.Args[1], "!quit") &&
+		message.Nick == "sand") {
+		c.Quit()
+	} else if !strings.HasPrefix(message.Args[1], c.nickname) {
 		return
 	}
 

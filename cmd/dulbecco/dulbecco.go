@@ -16,7 +16,13 @@ var (
 func main() {
 	flag.Parse()
 
-	fmt.Printf("Config file: %s\n", *configFile)
+	config := dulbecco.ReadConfig(*configFile)
+	// fmt.Printf("%+v\n", config)
+
+	for _, server := range config.Servers {
+		fmt.Printf("server config: %+v\n", server)
+	}
+	
 
 	conn := dulbecco.NewConnection("127.0.0.1:6667", "dulbecco")
 	err := conn.Connect()

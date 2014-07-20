@@ -18,6 +18,10 @@ type Message struct {
 	Time time.Time
 }
 
+func (m *Message) Dump() {
+	fmt.Printf("%+v\n", m)
+}
+
 func parseMessage(s string) *Message {
 	message := &Message{Raw: s}
 

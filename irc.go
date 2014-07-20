@@ -96,6 +96,7 @@ func (c *Connection) readLoop() {
 
 		if message := parseMessage(line); message != nil {
 			message.Time = time.Now()
+			message.Dump()
 			c.in <- message
 		} else {
 			log.Println("parsing failed for line: ", line)

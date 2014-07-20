@@ -1,3 +1,10 @@
+// dulbecco is a IRC bot.
+//
+// Plugin support through external commands (bash, python, ...).
+//
+//   most of the code was copied from:
+//   - https://github.com/fluffle/goirc
+//   - https://github.com/thoj/go-ircevent
 package dulbecco
 
 import (
@@ -11,14 +18,14 @@ import (
 	"time"
 )
 
-// most of the code was copied from: https://github.com/fluffle/goirc/blob/go1/client/connection.go
-
+// A connection to the IRC server, also the main data structure of the IRC bot.
 type Connection struct {
 	// server address+port: "irc.example.com:6667"
 	address string
 
 	username, realname, nickname string
 	altnicknames                 []string
+	channels                     []string
 
 	// ping frequency
 	pingFreq time.Duration
@@ -83,6 +90,7 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 		realname:        realname,
 		nickname:        nickname,
 		altnicknames:    altnicknames,
+		channels:        srvConfig.Channels,
 		in:              make(chan *Message, 32),
 		out:             make(chan string, 32),
 		cWrite:          make(chan bool),

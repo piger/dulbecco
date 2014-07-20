@@ -43,6 +43,7 @@ func (c *Connection) RemoveCallback(name string, id string) bool {
 	return false
 }
 
+// Execute registered callbacks for message
 func (c *Connection) RunCallbacks(message *Message) {
 	if callbacks, ok := c.events[message.Cmd]; ok {
 		for _, callback := range callbacks {
@@ -58,6 +59,7 @@ func (c *Connection) RunCallbacks(message *Message) {
 	}
 }
 
+// Add internal callbacks.
 func (c *Connection) SetupCallbacks() {
 	c.events = make(map[string]map[string]func(*Message))
 
@@ -66,6 +68,7 @@ func (c *Connection) SetupCallbacks() {
 	c.AddCallback("PRIVMSG", c.h_PRIVMSG)
 }
 
+// Add callbacks for every configured plugin.
 func (c *Connection) SetupPlugins(plugins []PluginType) {
 	for _, plugin := range plugins {
 		log.Println("Adding callback for plugin:", plugin.Name)
@@ -108,19 +111,22 @@ func (c *Connection) addPluginCallback(plugin PluginType) {
 
 // callbacks
 
-// Pseudo-Event: INIT
-// Fired when the TCP connection to the IRC server is established successfully.
+// The INIT pseudo-event is fired when the TCP connection to the IRC
+// server is established successfully.
 func (c *Connection) h_INIT(message *Message) {
 	c.Nick(c.nickname)
 	c.User(c.username, c.realname)
 }
 
-// 001 numeric means we are "really connected" to the server.
+// 001 numeric means we are "really connected" to the server. In this callback
+// is safe to do things like joining channels or identifying with IRC services.
 func (c *Connection) h_001(message *Message) {
-	c.Join("#puzza")
+	for _, channel := range c.channels {
+		c.Join(channel)
+	}
 }
 
-// PRIVMSG: test callback
+// generic PRIVMSG callback handling QUIT command and dummy reply.
 func (c *Connection) h_PRIVMSG(message *Message) {
 	if strings.HasPrefix(message.Args[1], "!quit") &&
 		message.Nick == "sand" {

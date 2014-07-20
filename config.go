@@ -23,6 +23,7 @@ type ServerType struct {
 	Name         string
 	Address      string
 	Ssl          bool
+	Channels     []string
 	Nickname     string
 	Altnicknames []string
 	Username     string

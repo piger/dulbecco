@@ -91,8 +91,9 @@ def main():
     if command == 'read':
         rv = random_quote(conn, args)
     elif command == 'add':
-        author = os.environ.get('IRC_NICKNAME', 'unknown')
-        rv = add_quote(conn, author, args)
+        if args:
+            author = os.environ.get('IRC_NICKNAME', 'unknown')
+            rv = add_quote(conn, author, args)
 
     conn.close()
     sys.exit(rv)

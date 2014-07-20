@@ -19,6 +19,7 @@
 import os
 import sys
 from datetime import datetime
+from optparse import OptionParser
 import sqlite3
 
 
@@ -26,7 +27,6 @@ def init_db(filename):
     """Initialize database connection and create SCHEMA if needed"""
 
     create = not os.path.exists(filename)
-    create = True
     conn = sqlite3.connect(filename)
 
     if create:
@@ -43,20 +43,15 @@ def random_quote(conn, args=''):
     c = conn.cursor()
 
     if args:
-        c.execute('SELECT * FROM quotes WHERE id=?', (args,))
+        c.execute('SELECT id, quote FROM quotes WHERE id=?', (args,))
     else:
-        c.execute('SELECT * FROM quotes ORDER BY RANDOM() LIMIT 1;')
+        c.execute('SELECT id, quote FROM quotes ORDER BY RANDOM() LIMIT 1;')
     row = c.fetchone()
     if not row:
         return 1
 
-    col_names = [x[0] for x in c.description]
-    result = {}
-    for i, name in enumerate(col_names):
-        result[name] = row[i]
-
-    # print "results = %r" % result
-    print result['quote'].encode('utf-8')
+    quote = row[1].encode('utf-8')
+    print "%d: %s" % (row[0], quote)
 
 
 def add_quote(conn, author, quote):
@@ -77,14 +72,17 @@ def add_quote(conn, author, quote):
 
 
 def main():
-    if len(sys.argv) < 3:
-        print >>sys.stderr, "Usage: %s <db file> <command> [args...]" % (
-            os.path.basename(sys.argv[0]))
-        sys.exit(1)
+    parser = OptionParser()
+    parser.add_option('-d', '--db', help="SQLite database file; env: QUOTES_DB")
+    (opts, args) = parser.parse_args()
+    db_file = opts.db or os.environ.get('QUOTES_DB')
+    if not db_file:
+        parser.error("You must specify a database file")
+    elif not args:
+        parser.error("You must specify a command: 'read' or 'add'")
 
-    db_file = os.path.abspath(sys.argv[1])
-    command = sys.argv[2]
-    args = ' '.join(sys.argv[3:])
+    command = args[0]
+    args = ' '.join(args[1:])
 
     conn = init_db(db_file)
     rv = 0

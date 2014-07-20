@@ -10,7 +10,10 @@ import (
 	"time"
 )
 
+// most of the code was copied from: https://github.com/fluffle/goirc/blob/go1/client/connection.go
+
 type Connection struct {
+	// server address+port: "irc.example.com:6667"
 	address string
 
 	username, realname, nickname string
@@ -18,6 +21,11 @@ type Connection struct {
 
 	// ping frequency
 	pingFreq time.Duration
+
+	// anti-flood protection
+	floodProtection bool
+	badness         time.Duration
+	lastSent        time.Time
 
 	// IO
 	sock      net.Conn
@@ -40,6 +48,8 @@ type Connection struct {
 }
 
 func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType) *Connection {
+	// get configuration values from the server config object, falling back
+	// to the global config.
 	var nickname, username, realname string
 	var altnicknames []string
 
@@ -60,26 +70,31 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType) *Connect
 	}
 
 	conn := &Connection{
-		address:      srvConfig.Address,
-		useTLS:       srvConfig.Ssl,
-		sslConfig:    nil,
-		pingFreq:     3 * time.Minute,
-		username:     username,
-		realname:     realname,
-		nickname:     nickname,
-		altnicknames: altnicknames,
-		in:           make(chan *Message, 32),
-		out:          make(chan string, 32),
-		cWrite:       make(chan bool),
-		cEvent:       make(chan bool),
-		cPing:        make(chan bool),
+		address:         srvConfig.Address,
+		useTLS:          srvConfig.Ssl,
+		sslConfig:       nil,
+		pingFreq:        3 * time.Minute,
+		username:        username,
+		realname:        realname,
+		nickname:        nickname,
+		altnicknames:    altnicknames,
+		in:              make(chan *Message, 32),
+		out:             make(chan string, 32),
+		cWrite:          make(chan bool),
+		cEvent:          make(chan bool),
+		cPing:           make(chan bool),
+		floodProtection: true,
+		badness:         0,
+		lastSent:        time.Now(),
 	}
 
+	// setup internal callbacks
 	conn.SetupCallbacks()
 
 	return conn
 }
 
+// Connect to the server, launch all internal goroutines.
 func (c *Connection) Connect() error {
 	if c.useTLS {
 		if s, err := tls.Dial("tcp", c.address, c.sslConfig); err == nil {
@@ -95,9 +110,8 @@ func (c *Connection) Connect() error {
 		}
 	}
 
-	log.Println("Connected!\n")
+	log.Println("Connected to %s\n", c.address)
 	c.Connected = true
-	c.RunCallbacks(&Message{Cmd: "INIT"})
 
 	c.io = bufio.NewReadWriter(
 		bufio.NewReader(c.sock),
@@ -107,6 +121,8 @@ func (c *Connection) Connect() error {
 	go c.readLoop()
 	go c.pingLoop()
 	go c.eventLoop()
+
+	c.RunCallbacks(&Message{Cmd: "INIT"})
 
 	return nil
 }
@@ -169,6 +185,13 @@ func (c *Connection) eventLoop() {
 }
 
 func (c *Connection) write(line string) {
+	if !c.floodProtection {
+		if t := c.rateLimit(len(line)); t != 0 {
+			log.Println("anti-flood: sleeping for %.2f seconds", t.Seconds())
+			<-time.After(t)
+		}
+	}
+
 	if _, err := c.io.WriteString(line + "\r\n"); err != nil {
 		log.Println("write failed: ", err)
 		c.shutdown()
@@ -182,6 +205,21 @@ func (c *Connection) write(line string) {
 	}
 
 	log.Println("wrote line: ", line)
+}
+
+func (c *Connection) rateLimit(chars int) time.Duration {
+	lineTime := 2*time.Second + time.Duration(chars)*time.Second/120
+	elapsed := time.Now().Sub(c.lastSent)
+	if c.badness += lineTime - elapsed; c.badness < 0 {
+		c.badness = 0
+	}
+	c.lastSent = time.Now()
+
+	if c.badness > 10*time.Second {
+		return lineTime
+	}
+
+	return 0
 }
 
 func (c *Connection) shutdown() {

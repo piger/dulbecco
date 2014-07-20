@@ -24,7 +24,7 @@ func parseMessage(s string) *Message {
 	// line begins with a source:
 	// :ident!nick@host PRIVMSG #test :ciaone
 	if s[0] == ':' {
-		splitted := strings.SplitN(s, " ", 2)
+		splitted := strings.SplitN(s[1:], " ", 2)
 		if len(splitted) != 2 {
 			fmt.Printf("Invalid line: %q\n", s)
 			return nil

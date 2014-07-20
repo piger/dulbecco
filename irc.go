@@ -46,7 +46,7 @@ type Connection struct {
 	cWrite chan bool
 	cEvent chan bool
 	cPing  chan bool
-	CQuit   chan bool
+	CQuit  chan bool
 
 	// callbacks
 	events map[string]map[string]func(*Message)
@@ -91,7 +91,7 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 		floodProtection: true,
 		badness:         0,
 		lastSent:        time.Now(),
-		CQuit:            quit,
+		CQuit:           quit,
 	}
 
 	// setup internal callbacks

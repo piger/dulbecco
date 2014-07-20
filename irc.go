@@ -148,7 +148,7 @@ func (c *Connection) readLoop() {
 		}
 
 		line = strings.Trim(line, "\r\n")
-		log.Println("READ: ", line)
+		// log.Println("READ: ", line)
 
 		if message := parseMessage(line); message != nil {
 			message.Time = time.Now()
@@ -204,7 +204,7 @@ func (c *Connection) write(line string) {
 		return
 	}
 
-	log.Println("wrote line: ", line)
+	// log.Println("wrote line: ", line)
 }
 
 func (c *Connection) rateLimit(chars int) time.Duration {

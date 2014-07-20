@@ -64,18 +64,20 @@ func (c *Connection) SetupCallbacks() {
 
 
 // callbacks
-func (c *Connection) h_INIT(message *Message) {
-	fmt.Printf("Running handler h_INIT\n")
 
+// Pseudo-Event: INIT
+// Fired when the TCP connection to the IRC server is established successfully.
+func (c *Connection) h_INIT(message *Message) {
 	c.Nick(c.nickname)
 	c.User(c.username, c.realname)
 }
 
-// "Connected" event upon receiving numeric 001
+// 001 numeric means we are "really connected" to the server.
 func (c *Connection) h_001(message *Message) {
 	c.Join("#puzza")
 }
 
+// PRIVMSG: test callback
 func (c *Connection) h_PRIVMSG(message *Message) {
 	if message.InChannel() {
 		c.Privmsg(message.Args[0], message.Nick + " ciao a te")

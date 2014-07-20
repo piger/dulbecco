@@ -4,7 +4,6 @@ import (
 	"strings"
 )
 
-
 // send a "raw" line to the server
 func (c *Connection) Raw(s string) {
 	c.out <- s

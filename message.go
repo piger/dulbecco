@@ -1,11 +1,10 @@
 package dulbecco
 
 import (
+	"fmt"
 	"strings"
 	"time"
-	"fmt"
 )
-
 
 // Each line from the IRC server is parsed into a Message struct.
 //   Src => "irc.example.com" or "nick!ident@host"
@@ -14,8 +13,8 @@ type Message struct {
 	Ident, Nick, Host, Src string
 
 	Cmd, Raw string
-	Args []string
-	Time time.Time
+	Args     []string
+	Time     time.Time
 }
 
 func (m *Message) Dump() {
@@ -52,8 +51,8 @@ func parseMessage(s string) *Message {
 		nidx, iidx := strings.Index(message.Src, "!"), strings.Index(message.Src, "@")
 		if nidx != -1 && iidx != -1 {
 			message.Nick = message.Src[:nidx]
-			message.Ident = message.Src[nidx + 1:iidx]
-			message.Host = message.Src[iidx + 1:]
+			message.Ident = message.Src[nidx+1 : iidx]
+			message.Host = message.Src[iidx+1:]
 		}
 	}
 
@@ -91,7 +90,7 @@ func parseMessage(s string) *Message {
 		// now t[] contains: ["PING", "1405848291 393196"]
 
 		// now Args[1] is: "1405848291 393196" without CTCP characters (\001)
-		if c:= strings.ToUpper(t[0]); c == "ACTION" && message.Cmd == "PRIVMSG" {
+		if c := strings.ToUpper(t[0]); c == "ACTION" && message.Cmd == "PRIVMSG" {
 			message.Cmd = c
 		} else {
 			if message.Cmd == "PRIVMSG" {

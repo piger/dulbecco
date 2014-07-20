@@ -1,9 +1,9 @@
 package dulbecco
 
 import (
-	"log"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 )
 
 type jsonobject struct {
@@ -11,21 +11,21 @@ type jsonobject struct {
 }
 
 type ConfigurationType struct {
-	Nickname string
+	Nickname     string
 	Altnicknames []string
-	Username string
-	Realname string
-	Servers []ServerType
+	Username     string
+	Realname     string
+	Servers      []ServerType
 }
 
 type ServerType struct {
-	Name string
-	Address string
-	Ssl bool
-	Nickname string
+	Name         string
+	Address      string
+	Ssl          bool
+	Nickname     string
 	Altnicknames []string
-	Username string
-	Realname string
+	Username     string
+	Realname     string
 }
 
 func ReadConfig(filename string) *ConfigurationType {

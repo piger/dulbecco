@@ -166,11 +166,10 @@ func (c *Connection) readLoop() {
 		// log.Println("READ: ", line)
 
 		if message := parseMessage(line); message != nil {
-			message.Time = time.Now()
-			message.Dump()
+			log.Println("message =", message.Dump())
 			c.in <- message
 		} else {
-			log.Println("parsing failed for line: ", line)
+			log.Println("parsing failed for line:", line)
 		}
 	}
 }

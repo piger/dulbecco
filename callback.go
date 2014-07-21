@@ -129,8 +129,8 @@ func (c *Connection) h_001(message *Message) {
 	}
 }
 
+// Server PING.
 func (c *Connection) h_PING(message *Message) {
-	log.Println("PING received!")
 	c.Raw("PONG " + message.Args[0])
 }
 

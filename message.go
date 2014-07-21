@@ -17,8 +17,8 @@ type Message struct {
 	Time     time.Time
 }
 
-func (m *Message) Dump() {
-	fmt.Printf("%+v\n", m)
+func (m *Message) Dump() string {
+	return fmt.Sprintf("%+v", m)
 }
 
 // Returns true if the Message generated inside a IRC channel
@@ -33,7 +33,7 @@ func (m *Message) InChannel() bool {
 
 // Parse a line from the IRC server into a Message struct.
 func parseMessage(s string) *Message {
-	message := &Message{Raw: s}
+	message := &Message{Raw: s, Time: time.Now()}
 
 	// line begins with a source:
 	// :ident!nick@host PRIVMSG #test :ciaone

@@ -17,12 +17,21 @@ type Message struct {
 	Time     time.Time
 }
 
+// Returns a channel name when the message was sent to a public channel or
+// a nickname when the message was sent privately.
+func (m *Message) ReplyTarget() string {
+	if m.InChannel() {
+		return m.Args[0]
+	}
+	return m.Nick
+}
+
 func (m *Message) Dump() string {
 	return fmt.Sprintf("%+v", m)
 }
 
 // Returns true if the Message generated inside a IRC channel
-// Channel types: https://www.alien.net.au/irc/chantypes.html
+//   Channel types: https://www.alien.net.au/irc/chantypes.html
 func (m *Message) InChannel() bool {
 	if len(m.Args) > 0 && len(m.Args[0]) > 0 {
 		return strings.ContainsAny(string(m.Args[0][0]), "&#!+.~")

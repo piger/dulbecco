@@ -107,8 +107,9 @@ func (c *Connection) addPluginCallback(plugin PluginType) {
 
 		if out, err := cmd.Output(); err == nil {
 			lines := strings.Trim(string(out), "\n")
+			target := message.ReplyTarget()
 			for _, line := range strings.Split(lines, "\n") {
-				c.Privmsg(message.Args[0], line)
+				c.Privmsg(target, line)
 			}
 		} else {
 			log.Printf("Failed exec for plugin '%s': %s\n", plugin.Name, err)

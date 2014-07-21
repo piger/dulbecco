@@ -81,13 +81,15 @@ def main():
     elif not args:
         parser.error("You must specify a command: 'read' or 'add'")
 
-    command = args[0]
-    args = ' '.join(args[1:])
-    if not args:
+    command = args.pop(0)
+    if args:
+        args = ' '.join(args[1:])
+    else:
         args = os.environ.get('IRC_ARGS') or ''
         # skip over the first word, which should be the IRC "command",
         # i.e. "!addq"
-        _, args = args.split(' ', 1)
+        if ' ' in args:
+            _, args = args.split(' ', 1)
 
     conn = init_db(db_file)
     rv = 0

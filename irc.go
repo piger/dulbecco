@@ -162,7 +162,7 @@ func (c *Connection) readLoop() {
 			return
 		}
 
-		line = strings.Trim(line, "\r\n")
+		line = strings.TrimRight(line, "\r\n")
 		// log.Println("READ: ", line)
 
 		if message := parseMessage(line); message != nil {
@@ -180,7 +180,7 @@ func (c *Connection) pingLoop() {
 	for {
 		select {
 		case <-tick.C:
-			c.Raw(fmt.Sprintf("PING :%d", time.Now().UnixNano()))
+			c.ServerPing()
 		case <-c.cPing:
 			return
 		}
@@ -206,7 +206,7 @@ func (c *Connection) write(line string) {
 		}
 	}
 
-	if _, err := c.io.WriteString(line + "\r\n"); err != nil {
+	if _, err := c.io.WriteString(line); err != nil {
 		log.Println("write failed: ", err)
 		go c.shutdown()
 		return

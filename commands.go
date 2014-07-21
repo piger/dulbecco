@@ -7,7 +7,7 @@ import (
 
 // send a "raw" line to the server
 func (c *Connection) Raw(s string) {
-	c.out <- s
+	c.out <- fmt.Sprintf("%s\r\n", s)
 }
 
 // send a "raw" formatted line to the server
@@ -96,4 +96,9 @@ func (c *Connection) Mode(target string, modes ...string) {
 	} else {
 		c.Rawf("MODE %s", target)
 	}
+}
+
+// send a PING to the server
+func (c *Connection) ServerPing() {
+	c.Rawf("PING :%d", time.Now().UnixNano())
 }

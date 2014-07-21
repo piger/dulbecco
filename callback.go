@@ -66,6 +66,7 @@ func (c *Connection) SetupCallbacks() {
 	c.AddCallback("INIT", c.h_INIT)
 	c.AddCallback("001", c.h_001)
 	c.AddCallback("PRIVMSG", c.h_PRIVMSG)
+	c.AddCallback("PING", c.h_PING)
 }
 
 // Add callbacks for every configured plugin.
@@ -105,6 +106,8 @@ func (c *Connection) addPluginCallback(plugin PluginType) {
 			for _, line := range strings.Split(lines, "\n") {
 				c.Privmsg(message.Args[0], line)
 			}
+		} else {
+			log.Printf("Failed exec for plugin '%s': %s\n", plugin.Name, err)
 		}
 	})
 }
@@ -124,6 +127,11 @@ func (c *Connection) h_001(message *Message) {
 	for _, channel := range c.channels {
 		c.Join(channel)
 	}
+}
+
+func (c *Connection) h_PING(message *Message) {
+	log.Println("PING received!")
+	c.Raw("PONG " + message.Args[0])
 }
 
 // generic PRIVMSG callback handling QUIT command and dummy reply.

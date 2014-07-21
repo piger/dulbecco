@@ -40,7 +40,6 @@ func parseMessage(s string) *Message {
 	if s[0] == ':' {
 		splitted := strings.SplitN(s[1:], " ", 2)
 		if len(splitted) != 2 {
-			fmt.Printf("Invalid line: %q\n", s)
 			return nil
 		}
 		message.Src, s = splitted[0], splitted[1]

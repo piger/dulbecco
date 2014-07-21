@@ -10,7 +10,6 @@ package dulbecco
 import (
 	"bufio"
 	"crypto/tls"
-	"fmt"
 	"log"
 	"net"
 	"strings"
@@ -23,9 +22,9 @@ type Connection struct {
 	// server address+port: "irc.example.com:6667"
 	address string
 
-	username, realname, nickname string
-	altnicknames                 []string
-	channels                     []string
+	username, realname, nickname, password string
+	altnicknames                           []string
+	channels                               []string
 
 	// ping frequency
 	pingFreq time.Duration
@@ -83,6 +82,7 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 
 	conn := &Connection{
 		address:         srvConfig.Address,
+		password:        srvConfig.Password,
 		useTLS:          srvConfig.Ssl,
 		sslConfig:       nil,
 		pingFreq:        3 * time.Minute,

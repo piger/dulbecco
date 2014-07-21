@@ -28,6 +28,7 @@ type ServerType struct {
 	Altnicknames []string
 	Username     string
 	Realname     string
+	Password     string
 }
 
 type PluginType struct {

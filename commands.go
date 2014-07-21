@@ -1,8 +1,9 @@
 package dulbecco
 
 import (
-	"strings"
 	"fmt"
+	"strings"
+	"time"
 )
 
 // send a "raw" line to the server
@@ -25,6 +26,11 @@ func (c *Connection) Nick(nickname string) {
 //   Parameters: <user> <mode> <unused> <realname>
 func (c *Connection) User(ident, realname string) {
 	c.Rawf("USER %s 12 * :%s", ident, realname)
+}
+
+// PASS command
+func (c *Connection) Pass(password string) {
+	c.Rawf("PASS %s", password)
 }
 
 // JOIN command
@@ -73,6 +79,16 @@ func (c *Connection) Action(target, message string) {
 	c.Privmsgf(target, "\001%s\001", message)
 }
 
+// INVITE command
+func (c *Connection) Invite(nickname, channel string) {
+	c.Rawf("INVITE %s %s", nickname, channel)
+}
+
+// KICK command
+func (c *Connection) Kick(channel, nickname, reason string) {
+	c.Rawf("KICK %s %s :%s", channel, nickname, reason)
+}
+
 // WHOIS
 func (c *Connection) Whois(nickname string) {
 	c.Rawf("WHOIS %s", nickname)
@@ -96,6 +112,14 @@ func (c *Connection) Mode(target string, modes ...string) {
 	} else {
 		c.Rawf("MODE %s", target)
 	}
+}
+
+func (c *Connection) GetTopic(channel string) {
+	c.Rawf("TOPIC %s", channel)
+}
+
+func (c *Connection) SetTopic(channel, topic string) {
+	c.Rawf("TOPIC %s :%s", channel, topic)
 }
 
 // send a PING to the server

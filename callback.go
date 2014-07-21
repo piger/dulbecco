@@ -121,6 +121,9 @@ func (c *Connection) addPluginCallback(plugin PluginType) {
 // The INIT pseudo-event is fired when the TCP connection to the IRC
 // server is established successfully.
 func (c *Connection) h_INIT(message *Message) {
+	if len(c.password) > 0 {
+		c.Pass(c.password)
+	}
 	c.Nick(c.nickname)
 	c.User(c.username, c.realname)
 }

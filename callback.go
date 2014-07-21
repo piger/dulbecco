@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"reflect"
 	"strings"
+	"strconv"
+	"time"
 )
 
 func (c *Connection) AddCallback(name string, callback func(*Message)) string {
@@ -65,8 +67,10 @@ func (c *Connection) SetupCallbacks() {
 
 	c.AddCallback("INIT", c.h_INIT)
 	c.AddCallback("001", c.h_001)
+	c.AddCallback("433", c.h_433)
 	c.AddCallback("PRIVMSG", c.h_PRIVMSG)
 	c.AddCallback("PING", c.h_PING)
+	c.AddCallback("PONG", c.h_PONG)
 }
 
 // Add callbacks for every configured plugin.
@@ -129,9 +133,23 @@ func (c *Connection) h_001(message *Message) {
 	}
 }
 
+// ERR_NICKNAMEINUSE
+func (c *Connection) h_433(message *Message) {
+	c.Nick(c.nickname + "_")
+}
+
 // Server PING.
 func (c *Connection) h_PING(message *Message) {
 	c.Raw("PONG " + message.Args[0])
+}
+
+func (c *Connection) h_PONG(message *Message) {
+	theirTime, err := strconv.ParseInt(message.Args[0], 10, 64)
+	if err != nil {
+		return
+	}
+	delta := time.Duration(time.Now().UnixNano() - theirTime)
+	log.Println("Lag: %v\n", delta)
 }
 
 // generic PRIVMSG callback handling QUIT command and dummy reply.

@@ -48,6 +48,7 @@ def random_quote(conn, args=''):
         c.execute('SELECT id, quote FROM quotes ORDER BY RANDOM() LIMIT 1;')
     row = c.fetchone()
     if not row:
+        print "Quote not found"
         return 1
 
     quote = row[1].encode('utf-8')
@@ -84,12 +85,6 @@ def main():
     command = args.pop(0)
     if args:
         args = ' '.join(args[1:])
-    else:
-        args = os.environ.get('IRC_ARGS') or ''
-        # skip over the first word, which should be the IRC "command",
-        # i.e. "!addq"
-        if ' ' in args:
-            _, args = args.split(' ', 1)
 
     conn = init_db(db_file)
     rv = 0

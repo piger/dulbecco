@@ -71,6 +71,7 @@ func (c *Connection) SetupCallbacks() {
 	c.AddCallback("PRIVMSG", c.h_PRIVMSG)
 	c.AddCallback("PING", c.h_PING)
 	c.AddCallback("PONG", c.h_PONG)
+	c.AddCallback("CTCP", c.h_CTCP)
 }
 
 // Add callbacks for every configured plugin.
@@ -169,5 +170,12 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 		c.Privmsg(message.Args[0], message.Nick+" ciao a te")
 	} else {
 		c.Privmsg(message.Nick, "ehy ciao")
+	}
+}
+
+// general CTCP handler
+func (c *Connection) h_CTCP(message *Message) {
+	if message.Args[0] == "PING" {
+		c.CtcpReply(message.Nick, fmt.Sprintf("PING %s", message.Args[2]))
 	}
 }

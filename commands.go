@@ -74,6 +74,10 @@ func (c *Connection) Notice(target, message string) {
 	c.Rawf("NOTICE %s :%s", target, message)
 }
 
+func (c *Connection) Noticef(target, format string, a ...interface{}) {
+	c.Notice(target, fmt.Sprintf(format, a...))
+}
+
 // ACTION command
 func (c *Connection) Action(target, message string) {
 	c.Privmsgf(target, "\001%s\001", message)
@@ -125,4 +129,14 @@ func (c *Connection) SetTopic(channel, topic string) {
 // send a PING to the server
 func (c *Connection) ServerPing() {
 	c.Rawf("PING :%d", time.Now().UnixNano())
+}
+
+// CTCP
+func (c *Connection) Ctcp(target, args string) {
+	c.Privmsgf(target, "\001%s\001", args)
+}
+
+// CTCP replies
+func (c *Connection) CtcpReply(target, args string) {
+	c.Noticef(target, "\001%s\001", args)
 }

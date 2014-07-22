@@ -8,8 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
-	"strings"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -86,8 +87,15 @@ func (c *Connection) SetupPlugins(plugins []PluginType) {
 // We use a separate method because we need a "copy" of the "plugin" variable,
 // since it will be bound inside the closure.
 func (c *Connection) addPluginCallback(plugin PluginType) {
+
+	// this is the actual plugin callback
 	c.AddCallback("PRIVMSG", func(message *Message) {
-		if !strings.HasPrefix(message.Args[1], plugin.Trigger) {
+		matched, err := regexp.MatchString(plugin.Trigger, message.Args[1])
+		if err != nil {
+			log.Printf("Error in regexp for plugin %s: %s\n", plugin.Name, err)
+			return
+		}
+		if !matched {
 			return
 		}
 

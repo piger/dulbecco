@@ -32,14 +32,15 @@ type Connection struct {
 	// enable anti-flood protection
 	floodProtection bool
 	// anti-flood internal counters
-	badness         time.Duration
-	lastSent        time.Time
+	badness  time.Duration
+	lastSent time.Time
 
 	// IO
 	sock      net.Conn
 	io        *bufio.ReadWriter
 	out       chan string
 	connected bool
+	tryReconnect bool
 
 	// lock shutdown calls
 	mutex sync.Mutex
@@ -90,6 +91,8 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 		realname:        realname,
 		nickname:        nickname,
 		altnicknames:    altnicknames,
+		connected:       false,
+		tryReconnect:       true,
 		channels:        srvConfig.Channels,
 		out:             make(chan string, 32),
 		cWrite:          make(chan bool),
@@ -239,9 +242,24 @@ func (c *Connection) shutdown() {
 		c.sock = nil
 
 		c.RunCallbacks(&Message{Cmd: "DISCONNECT"})
-		c.CQuit <- true
+
+		if c.tryReconnect {
+			go c.reconnect()
+		} else {
+			c.CQuit <- true
+		}
 		log.Println("end of shutdown")
 	}
 	c.mutex.Unlock()
 	log.Println("exit shutdown()")
+}
+
+func (c *Connection) reconnect() {
+	for {
+		log.Println("Sleeping 5 minutes before trying to reconnect")
+		time.Sleep(5 * time.Minute)
+		if err := c.Connect(); err == nil {
+			return
+		}
+	}
 }

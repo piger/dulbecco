@@ -29,17 +29,17 @@ type Connection struct {
 	// ping frequency
 	pingFreq time.Duration
 
-	// anti-flood protection
+	// enable anti-flood protection
 	floodProtection bool
+	// anti-flood internal counters
 	badness         time.Duration
 	lastSent        time.Time
 
 	// IO
 	sock      net.Conn
 	io        *bufio.ReadWriter
-	in        chan *Message
 	out       chan string
-	Connected bool
+	connected bool
 
 	// lock shutdown calls
 	mutex sync.Mutex
@@ -91,10 +91,8 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 		nickname:        nickname,
 		altnicknames:    altnicknames,
 		channels:        srvConfig.Channels,
-		in:              make(chan *Message, 32),
 		out:             make(chan string, 32),
 		cWrite:          make(chan bool),
-		cEvent:          make(chan bool),
 		cPing:           make(chan bool),
 		floodProtection: true,
 		badness:         0,
@@ -126,7 +124,7 @@ func (c *Connection) Connect() error {
 	}
 
 	log.Println("Connected to:", c.address)
-	c.Connected = true
+	c.connected = true
 
 	c.io = bufio.NewReadWriter(
 		bufio.NewReader(c.sock),
@@ -135,7 +133,6 @@ func (c *Connection) Connect() error {
 	go c.writeLoop()
 	go c.readLoop()
 	go c.pingLoop()
-	go c.eventLoop()
 
 	c.RunCallbacks(&Message{Cmd: "INIT"})
 
@@ -167,7 +164,7 @@ func (c *Connection) readLoop() {
 
 		if message := parseMessage(line); message != nil {
 			log.Println("message =", message.Dump())
-			c.in <- message
+			c.RunCallbacks(message)
 		} else {
 			log.Println("parsing failed for line:", line)
 		}
@@ -182,17 +179,6 @@ func (c *Connection) pingLoop() {
 		case <-tick.C:
 			c.ServerPing()
 		case <-c.cPing:
-			return
-		}
-	}
-}
-
-func (c *Connection) eventLoop() {
-	for {
-		select {
-		case message := <-c.in:
-			c.RunCallbacks(message)
-		case <-c.cEvent:
 			return
 		}
 	}
@@ -240,13 +226,12 @@ func (c *Connection) shutdown() {
 	c.mutex.Lock()
 	log.Println("enter shutdown()")
 
-	if c.Connected {
+	if c.connected {
 		log.Println("shutting down connection")
 
-		c.Connected = false
+		c.connected = false
 		c.sock.Close()
 		c.cWrite <- true
-		c.cEvent <- true
 		c.cPing <- true
 
 		c.io = nil

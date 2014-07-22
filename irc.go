@@ -179,6 +179,7 @@ func (c *Connection) pingLoop() {
 		case <-tick.C:
 			c.ServerPing()
 		case <-c.cPing:
+			tick.Stop()
 			return
 		}
 	}

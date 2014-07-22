@@ -143,7 +143,12 @@ func (c *Connection) writeLoop() {
 	for {
 		select {
 		case line := <-c.out:
-			c.write(line)
+			err := c.write(line)
+			if err != nil {
+				log.Println("ERROR writing:", err)
+				go c.shutdown()
+				return
+			}
 		case <-c.cWrite:
 			return
 		}
@@ -185,7 +190,7 @@ func (c *Connection) pingLoop() {
 	}
 }
 
-func (c *Connection) write(line string) {
+func (c *Connection) write(line string) error {
 	if !c.floodProtection {
 		if t := c.rateLimit(len(line)); t != 0 {
 			log.Println("anti-flood: sleeping for %.2f seconds", t.Seconds())
@@ -194,18 +199,13 @@ func (c *Connection) write(line string) {
 	}
 
 	if _, err := c.io.WriteString(line); err != nil {
-		log.Println("write failed: ", err)
-		go c.shutdown()
-		return
+		return err
 	}
 
 	if err := c.io.Flush(); err != nil {
-		log.Println("flush failed: ", err)
-		go c.shutdown()
-		return
+		return err
 	}
-
-	// log.Println("wrote line: ", line)
+	return nil
 }
 
 func (c *Connection) rateLimit(chars int) time.Duration {

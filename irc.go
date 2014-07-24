@@ -171,7 +171,7 @@ func (c *Connection) readLoop() {
 		// log.Println("READ: ", line)
 
 		if message := parseMessage(line); message != nil {
-			log.Println("message =", message.String())
+			log.Println("message =", message.Dump())
 			c.RunCallbacks(message)
 		} else {
 			log.Println("parsing failed for line:", line)

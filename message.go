@@ -26,7 +26,7 @@ func (m *Message) ReplyTarget() string {
 	return m.Nick
 }
 
-func (m *Message) String() string {
+func (m *Message) Dump() string {
 	return fmt.Sprintf("%+v", m)
 }
 

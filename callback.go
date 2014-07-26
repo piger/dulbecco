@@ -73,6 +73,10 @@ func (c *Connection) SetupCallbacks() {
 	c.AddCallback("PING", c.h_PING)
 	c.AddCallback("PONG", c.h_PONG)
 	c.AddCallback("CTCP", c.h_CTCP)
+	c.AddCallback("JOIN", c.h_JOIN)
+	c.AddCallback("332", c.h_332)
+	c.AddCallback("353", c.h_353)
+	c.AddCallback("KICK", c.h_KICK)
 }
 
 // Add callbacks for every configured plugin.
@@ -143,6 +147,55 @@ func (c *Connection) h_INIT(message *Message) {
 func (c *Connection) h_001(message *Message) {
 	for _, channel := range c.channels {
 		c.Join(channel)
+	}
+}
+
+// someone joined a channel
+func (c *Connection) h_JOIN(message *Message) {
+	if message.Nick == c.nickname {
+		channel := &Channel{name: message.Args[0]}
+		c.chanmap[channel.name] = channel
+		log.Printf("we have joined %s\n", message.Args[0])
+	} else {
+		log.Printf("%s joined %s\n", message.Nick, message.Args[0])
+	}
+}
+
+// RPL_TOPIC
+func (c *Connection) h_332(message *Message) {
+	var channame = message.Args[1]
+	var topic = message.Args[2]
+
+	if channel, ok := c.chanmap[channame]; ok {
+		channel.topic = topic
+		log.Printf("topic for %s is \"%s\"\n", channame, topic)
+	} else {
+		log.Printf("Channel %s not in map??\n", channame)
+	}
+}
+
+// NAMES
+func (c *Connection) h_353(message *Message) {
+	var channame = message.Args[2]
+	var names = strings.Split(strings.Trim(message.Args[3], " "), " ")
+
+	if channel, ok := c.chanmap[channame]; ok {
+		channel.names = append(channel.names, names...)
+		log.Printf("NAMES on %s: %v\n", channame, channel.names)
+	}
+}
+
+// rejoin when kicked after 5 seconds
+func (c *Connection) h_KICK(message *Message) {
+	var channame = message.Args[0]
+	var nick = strings.Trim(message.Args[1], " ")
+
+	if nick == c.nickname {
+		cTimer := time.After(5 * time.Second)
+		go func() {
+			<-cTimer
+			c.Join(channame)
+		}()
 	}
 }
 

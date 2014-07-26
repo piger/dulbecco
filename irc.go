@@ -17,6 +17,12 @@ import (
 	"time"
 )
 
+type Channel struct {
+	name  string
+	topic string
+	names []string
+}
+
 // A connection to the IRC server, also the main data structure of the IRC bot.
 type Connection struct {
 	// server address+port: "irc.example.com:6667"
@@ -25,6 +31,7 @@ type Connection struct {
 	username, realname, nickname, password string
 	altnicknames                           []string
 	channels                               []string
+	chanmap                                map[string]*Channel
 
 	// ping frequency
 	pingFreq time.Duration
@@ -36,10 +43,10 @@ type Connection struct {
 	lastSent time.Time
 
 	// IO
-	sock      net.Conn
-	io        *bufio.ReadWriter
-	out       chan string
-	connected bool
+	sock         net.Conn
+	io           *bufio.ReadWriter
+	out          chan string
+	connected    bool
 	tryReconnect bool
 
 	// lock shutdown calls
@@ -91,8 +98,9 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 		realname:        realname,
 		nickname:        nickname,
 		altnicknames:    altnicknames,
+		chanmap: make(map[string]*Channel),
 		connected:       false,
-		tryReconnect:       true,
+		tryReconnect:    false,
 		channels:        srvConfig.Channels,
 		out:             make(chan string, 32),
 		cWrite:          make(chan bool),

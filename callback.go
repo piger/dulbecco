@@ -75,8 +75,10 @@ func (c *Connection) SetupCallbacks() {
 	c.AddCallback("CTCP", c.h_CTCP)
 	c.AddCallback("JOIN", c.h_JOIN)
 	c.AddCallback("332", c.h_332)
+	c.AddCallback("352", c.h_352)
 	c.AddCallback("353", c.h_353)
 	c.AddCallback("KICK", c.h_KICK)
+	c.AddCallback("PART", c.h_PART)
 }
 
 // Add callbacks for every configured plugin.
@@ -132,6 +134,25 @@ func (c *Connection) addPluginCallback(plugin PluginType) {
 
 // callbacks
 
+// helper function to call when a user leave a channel
+func (c *Connection) removeUserChannel(nickname, channelname string) {
+	_, exists := c.chanmap[channelname]
+	if !exists {
+		log.Println("removeUserChannel: channel not found:", channelname)
+		return
+	}
+	user, exists := c.usermap[nickname]
+	if !exists {
+		log.Println("removeUserChannel: nickname not found:", nickname)
+		return
+	}
+	delete(user.channels, channelname)
+	if len(user.channels) == 0 {
+		delete(c.usermap, nickname)
+	}
+}
+
+
 // The INIT pseudo-event is fired when the TCP connection to the IRC
 // server is established successfully.
 func (c *Connection) h_INIT(message *Message) {
@@ -152,25 +173,64 @@ func (c *Connection) h_001(message *Message) {
 
 // someone joined a channel
 func (c *Connection) h_JOIN(message *Message) {
+	var channame = &message.Args[0]
+
+	// are we the one joining the channel?
 	if message.Nick == c.nickname {
+		// delete the old entry, if present
+		if _, ok := c.chanmap[*channame]; ok {
+			delete(c.chanmap, *channame)
+		}
 		channel := &Channel{name: message.Args[0]}
 		c.chanmap[channel.name] = channel
 		log.Printf("we have joined %s\n", message.Args[0])
+
+		log.Println("Sending a WHO")
+		c.Who(channel.name)
 	} else {
 		log.Printf("%s joined %s\n", message.Nick, message.Args[0])
 	}
 }
 
+func (c *Connection) h_PART(message *Message) {
+	if message.Nick == c.nickname {
+		delete(c.chanmap, message.Args[0])
+	} else {
+		c.removeUserChannel(message.Nick, message.Args[0])
+	}
+}
+
 // RPL_TOPIC
 func (c *Connection) h_332(message *Message) {
-	var channame = message.Args[1]
-	var topic = message.Args[2]
+	var channame = &message.Args[1]
+	var topic = &message.Args[2]
 
-	if channel, ok := c.chanmap[channame]; ok {
-		channel.topic = topic
-		log.Printf("topic for %s is \"%s\"\n", channame, topic)
+	if channel, ok := c.chanmap[*channame]; ok {
+		channel.topic = *topic
 	} else {
-		log.Printf("Channel %s not in map??\n", channame)
+		log.Printf("[332] Channel %s not in map??\n", *channame)
+	}
+}
+
+// WHO
+func (c *Connection) h_352(message *Message) {
+	if len(message.Args) != 8 {
+		log.Println("Invalid 352:", message)
+		return
+	}
+	nickname := &message.Args[5]
+	user, exists := c.usermap[*nickname]
+	if !exists {
+		user = NewUser(*nickname)
+	}
+
+	user.username = message.Args[2]
+	user.hostname = message.Args[3]
+	user.channels[message.Args[1]] = true
+
+	realnameStr := strings.SplitN(message.Args[7], " ", 2)
+	if len(realnameStr) > 1 {
+		user.realname = realnameStr[1]
 	}
 }
 
@@ -178,6 +238,16 @@ func (c *Connection) h_332(message *Message) {
 func (c *Connection) h_353(message *Message) {
 	var channame = message.Args[2]
 	var names = strings.Split(strings.Trim(message.Args[3], " "), " ")
+
+	for _, name := range names {
+		if user, ok := c.usermap[name]; ok {
+			user.channels[channame] = true
+		} else {
+			user := NewUser(name)
+			user.channels[channame] = true
+			c.usermap[name] = user
+		}
+	}
 
 	if channel, ok := c.chanmap[channame]; ok {
 		channel.names = append(channel.names, names...)
@@ -196,8 +266,11 @@ func (c *Connection) h_KICK(message *Message) {
 			<-cTimer
 			c.Join(channame)
 		}()
+	} else {
+		c.removeUserChannel(nick, channame)
 	}
 }
+
 
 // ERR_NICKNAMEINUSE
 func (c *Connection) h_433(message *Message) {

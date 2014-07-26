@@ -23,6 +23,19 @@ type Channel struct {
 	names []string
 }
 
+type User struct {
+	nickname, username, hostname, realname string
+	channels                               map[string]bool
+}
+
+func NewUser(nickname string) *User {
+	user := &User{
+		nickname: nickname,
+		channels: make(map[string]bool),
+	}
+	return user
+}
+
 // A connection to the IRC server, also the main data structure of the IRC bot.
 type Connection struct {
 	// server address+port: "irc.example.com:6667"
@@ -32,6 +45,7 @@ type Connection struct {
 	altnicknames                           []string
 	channels                               []string
 	chanmap                                map[string]*Channel
+	usermap                                map[string]*User
 
 	// ping frequency
 	pingFreq time.Duration
@@ -98,7 +112,8 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 		realname:        realname,
 		nickname:        nickname,
 		altnicknames:    altnicknames,
-		chanmap: make(map[string]*Channel),
+		chanmap:         make(map[string]*Channel),
+		usermap:         make(map[string]*User),
 		connected:       false,
 		tryReconnect:    false,
 		channels:        srvConfig.Channels,

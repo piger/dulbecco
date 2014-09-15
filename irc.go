@@ -25,7 +25,8 @@ type Channel struct {
 
 type User struct {
 	nickname, username, hostname, realname string
-	channels                               map[string]bool
+
+	channels map[string]bool
 }
 
 func NewUser(nickname string) *User {
@@ -113,21 +114,18 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 }
 
 // Connect to the server, launch all internal goroutines.
-func (c *Connection) Connect() error {
+func (c *Connection) Connect() (err error) {
+	var conn net.Conn
 	if c.useTLS {
-		if s, err := tls.Dial("tcp", c.address, c.sslConfig); err == nil {
-			c.sock = s
-		} else {
-			return err
-		}
+		conn, err = tls.Dial("tcp", c.address, c.sslConfig)
 	} else {
-		if s, err := net.Dial("tcp", c.address); err == nil {
-			c.sock = s
-		} else {
-			return err
-		}
+		conn, err = net.Dial("tcp", c.address)
+	}
+	if err != nil {
+		return
 	}
 
+	c.sock = conn
 	log.Println("Connected to:", c.address)
 	c.connected = true
 

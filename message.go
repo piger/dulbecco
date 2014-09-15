@@ -1,9 +1,16 @@
 package dulbecco
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
+)
+
+var (
+	ErrInvalidServerLine = errors.New("Invalid server line: wrong number of tokens")
+
+	CTCPChar = "\001"
 )
 
 // Each line from the IRC server is parsed into a Message struct.
@@ -20,7 +27,7 @@ type Message struct {
 // Returns a channel name when the message was sent to a public channel or
 // a nickname when the message was sent privately.
 func (m *Message) ReplyTarget() string {
-	if m.InChannel() {
+	if m.IsFromChannel() {
 		return m.Args[0]
 	}
 	return m.Nick
@@ -32,7 +39,7 @@ func (m *Message) Dump() string {
 
 // Returns true if the Message generated inside a IRC channel
 //   Channel types: https://www.alien.net.au/irc/chantypes.html
-func (m *Message) InChannel() bool {
+func (m *Message) IsFromChannel() bool {
 	if len(m.Args) > 0 && len(m.Args[0]) > 0 {
 		return strings.ContainsAny(string(m.Args[0][0]), "&#!+.~")
 	}
@@ -41,26 +48,31 @@ func (m *Message) InChannel() bool {
 }
 
 // Parse a line from the IRC server into a Message struct.
-func parseMessage(s string) *Message {
+func parseMessage(s string) (*Message, error) {
 	message := &Message{Raw: s, Time: time.Now()}
 
 	// line begins with a source:
 	// :ident!nick@host PRIVMSG #test :ciaone
+	// NOTE: if a line does not start with ":" it could be a server message like
+	// PING.
 	if s[0] == ':' {
-		splitted := strings.SplitN(s[1:], " ", 2)
-		if len(splitted) != 2 {
-			return nil
+		// split the line into two tokens:
+		// - ident!nickname@hostname
+		// - [rest of the line]
+		if splitted := strings.SplitN(s[1:], " ", 2); len(splitted) == 2 {
+			message.Src, s = splitted[0], splitted[1]
+		} else {
+			return nil, ErrInvalidServerLine
 		}
-		message.Src, s = splitted[0], splitted[1]
 
-		// message.Src can be a simple hostname or a "IRC" mask
-		message.Host = message.Src
-
+		// message.Src can be a simple hostname or a "IRC" mask; try to parse it.
 		nidx, iidx := strings.Index(message.Src, "!"), strings.Index(message.Src, "@")
 		if nidx != -1 && iidx != -1 {
 			message.Nick = message.Src[:nidx]
 			message.Ident = message.Src[nidx+1 : iidx]
 			message.Host = message.Src[iidx+1:]
+		} else {
+			message.Host = message.Src
 		}
 	}
 
@@ -89,9 +101,9 @@ func parseMessage(s string) *Message {
 	// Args[0] = nickname
 	// Args[1] = \001PING 1405848291 393196\001
 	if (message.Cmd == "PRIVMSG" || message.Cmd == "NOTICE") &&
-		strings.HasPrefix(message.Args[1], "\001") &&
-		strings.HasSuffix(message.Args[1], "\001") {
-		t := strings.SplitN(strings.Trim(message.Args[1], "\001"), " ", 2)
+		strings.HasPrefix(message.Args[1], CTCPChar) &&
+		strings.HasSuffix(message.Args[1], CTCPChar) {
+		t := strings.SplitN(strings.Trim(message.Args[1], CTCPChar), " ", 2)
 		if len(t) > 1 {
 			message.Args[1] = t[1]
 		}
@@ -111,5 +123,5 @@ func parseMessage(s string) *Message {
 		}
 	}
 
-	return message
+	return message, nil
 }

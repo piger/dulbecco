@@ -86,17 +86,17 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 		address:         srvConfig.Address,
 		password:        srvConfig.Password,
 		useTLS:          srvConfig.Ssl,
-		sslConfig:       nil,
-		pingFreq:        3 * time.Minute,
 		username:        srvConfig.Username,
 		realname:        srvConfig.Realname,
 		nickname:        srvConfig.Nickname,
 		altnicknames:    srvConfig.Altnicknames,
+		channels:        srvConfig.Channels,
+		sslConfig:       nil,
+		pingFreq:        3 * time.Minute,
 		chanmap:         make(map[string]*Channel),
 		usermap:         make(map[string]*User),
 		connected:       false,
 		tryReconnect:    false,
-		channels:        srvConfig.Channels,
 		out:             make(chan string, 32),
 		cWrite:          make(chan bool),
 		cPing:           make(chan bool),
@@ -170,11 +170,11 @@ func (c *Connection) readLoop() {
 		line = strings.TrimRight(line, "\r\n")
 		// log.Println("READ: ", line)
 
-		if message := parseMessage(line); message != nil {
+		if message, err := parseMessage(line); err == nil {
 			log.Println("message =", message.Dump())
 			c.RunCallbacks(message)
 		} else {
-			log.Println("parsing failed for line:", line)
+			log.Printf("parsing failed (%s) for line: %q\n", err, line)
 		}
 	}
 }

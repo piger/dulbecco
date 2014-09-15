@@ -17,10 +17,13 @@ import (
 	"time"
 )
 
+var (
+	pingFrequency = 3 * time.Minute
+)
+
 type Channel struct {
-	name  string
-	topic string
-	names []string
+	name, topic string
+	names       []string
 }
 
 type User struct {
@@ -43,10 +46,11 @@ type Connection struct {
 	address string
 
 	username, realname, nickname, password string
-	altnicknames                           []string
-	channels                               []string
-	chanmap                                map[string]*Channel
-	usermap                                map[string]*User
+
+	altnicknames []string
+	channels     []string
+	chanmap      map[string]*Channel
+	usermap      map[string]*User
 
 	// ping frequency
 	pingFreq time.Duration
@@ -68,8 +72,7 @@ type Connection struct {
 	mutex sync.Mutex
 
 	// SSL
-	useTLS    bool
-	sslConfig *tls.Config
+	useTLS bool
 
 	// Control channels
 	cWrite chan bool
@@ -91,17 +94,13 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 		nickname:        srvConfig.Nickname,
 		altnicknames:    srvConfig.Altnicknames,
 		channels:        srvConfig.Channels,
-		sslConfig:       nil,
-		pingFreq:        3 * time.Minute,
+		pingFreq:        pingFrequency,
 		chanmap:         make(map[string]*Channel),
 		usermap:         make(map[string]*User),
-		connected:       false,
-		tryReconnect:    false,
 		out:             make(chan string, 32),
 		cWrite:          make(chan bool),
 		cPing:           make(chan bool),
 		floodProtection: true,
-		badness:         0,
 		lastSent:        time.Now(),
 		CQuit:           quit,
 	}
@@ -117,7 +116,8 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 func (c *Connection) Connect() (err error) {
 	var conn net.Conn
 	if c.useTLS {
-		conn, err = tls.Dial("tcp", c.address, c.sslConfig)
+		// XXX should use a valid tls client configuration insted of nil (default)
+		conn, err = tls.Dial("tcp", c.address, nil)
 	} else {
 		conn, err = net.Dial("tcp", c.address)
 	}

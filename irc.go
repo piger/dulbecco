@@ -22,6 +22,10 @@ var (
 	pingFrequency = 3 * time.Minute
 )
 
+// the number of *Loop() methods on Connection; it's used for synchronization
+// and must be updated accordingly.
+const numLoops = 4
+
 type Channel struct {
 	name, topic string
 	names       []string
@@ -87,8 +91,8 @@ func NewConnection(config *ServerConfiguration, botConfig *Configuration) *Conne
 		floodProtection: true,
 		lastSent:        time.Now(),
 		out:             make(chan string, 32),
-		inerr:           make(chan error, 4),
-		outerr:          make(chan bool, 4),
+		inerr:           make(chan error, numLoops),
+		outerr:          make(chan bool, numLoops),
 	}
 
 	// setup internal callbacks
@@ -118,8 +122,8 @@ func (c *Connection) reinit() {
 	close(c.inerr)
 	close(c.outerr)
 	c.out = make(chan string, 32)
-	c.inerr = make(chan error, 4)
-	c.outerr = make(chan bool, 4)
+	c.inerr = make(chan error, numLoops)
+	c.outerr = make(chan bool, numLoops)
 }
 
 // Connect to the server, launch all internal goroutines.
@@ -141,7 +145,8 @@ func (c *Connection) Connect() (err error) {
 		bufio.NewReader(c.sock),
 		bufio.NewWriter(c.sock))
 
-	c.wg.Add(4)
+	// remember to update numLoops if you add or remove loop methods!
+	c.wg.Add(numLoops)
 	go c.writeLoop()
 	go c.readLoop()
 	go c.pingLoop()
@@ -169,7 +174,7 @@ func (c *Connection) errLoop() {
 			c.sock.Close()
 
 			// incoming error from a goroutine
-			for i := 0; i < 4; i++ {
+			for i := 0; i < numLoops; i++ {
 				c.outerr <- true
 			}
 			return

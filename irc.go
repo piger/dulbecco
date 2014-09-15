@@ -106,18 +106,16 @@ func NewConnection(config *ServerConfiguration, botConfig *Configuration, quit c
 
 // Connect to the server, launch all internal goroutines.
 func (c *Connection) Connect() (err error) {
-	var conn net.Conn
 	if c.config.Ssl {
 		// XXX should use a valid tls client configuration insted of nil (default)
-		conn, err = tls.Dial("tcp", c.config.Address, nil)
+		c.sock, err = tls.Dial("tcp", c.config.Address, nil)
 	} else {
-		conn, err = net.Dial("tcp", c.config.Address)
+		c.sock, err = net.Dial("tcp", c.config.Address)
 	}
 	if err != nil {
 		return
 	}
 
-	c.sock = conn
 	log.Println("Connected to:", c.config.Address)
 	c.connected = true
 

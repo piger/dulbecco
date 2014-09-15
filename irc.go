@@ -81,37 +81,16 @@ type Connection struct {
 }
 
 func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit chan bool) *Connection {
-	// get configuration values from the server config object, falling back
-	// to the global config.
-	var nickname, username, realname string
-	var altnicknames []string
-
-	if nickname = srvConfig.Nickname; len(nickname) == 0 {
-		nickname = genConfig.Nickname
-	}
-	if username = srvConfig.Username; len(username) == 0 {
-		username = genConfig.Username
-	}
-	if realname = srvConfig.Realname; len(realname) == 0 {
-		realname = genConfig.Realname
-	}
-
-	if len(srvConfig.Altnicknames) > 0 {
-		altnicknames = append(altnicknames, srvConfig.Altnicknames...)
-	} else {
-		altnicknames = append(altnicknames, genConfig.Altnicknames...)
-	}
-
 	conn := &Connection{
 		address:         srvConfig.Address,
 		password:        srvConfig.Password,
 		useTLS:          srvConfig.Ssl,
 		sslConfig:       nil,
 		pingFreq:        3 * time.Minute,
-		username:        username,
-		realname:        realname,
-		nickname:        nickname,
-		altnicknames:    altnicknames,
+		username:        srvConfig.Username,
+		realname:        srvConfig.Realname,
+		nickname:        srvConfig.Nickname,
+		altnicknames:    srvConfig.Altnicknames,
 		chanmap:         make(map[string]*Channel),
 		usermap:         make(map[string]*User),
 		connected:       false,

@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-
 	"github.com/piger/dulbecco"
+	"log"
 )
 
 var (
@@ -19,7 +19,7 @@ func main() {
 	quit := make(chan bool)
 
 	for _, server := range config.Servers {
-		fmt.Printf("server config: %+v\n", server)
+		log.Printf("Connecting to: %s\n", server.Address)
 
 		conn := dulbecco.NewConnection(&server, config, quit)
 		if err := conn.Connect(); err != nil {

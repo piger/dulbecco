@@ -6,17 +6,9 @@ import (
 	"log"
 )
 
-type jsonobject struct {
-	Configuration ConfigurationType
-}
-
 type ConfigurationType struct {
-	Nickname     string
-	Altnicknames []string
-	Username     string
-	Realname     string
-	Servers      []ServerType
-	Plugins      []PluginType
+	Servers []ServerType
+	Plugins []PluginType
 }
 
 type ServerType struct {
@@ -43,10 +35,10 @@ func ReadConfig(filename string) *ConfigurationType {
 		log.Fatal("ERROR Cannot read configuration file: ", err)
 	}
 
-	var jsontype jsonobject
-	if err := json.Unmarshal(file, &jsontype); err != nil {
+	var config ConfigurationType
+	if err := json.Unmarshal(file, &config); err != nil {
 		log.Fatal("ERROR Cannot parse configuration file: ", err)
 	}
 
-	return &jsontype.Configuration
+	return &config
 }

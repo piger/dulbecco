@@ -152,7 +152,6 @@ func (c *Connection) removeUserChannel(nickname, channelname string) {
 	}
 }
 
-
 // The INIT pseudo-event is fired when the TCP connection to the IRC
 // server is established successfully.
 func (c *Connection) h_INIT(message *Message) {
@@ -271,7 +270,6 @@ func (c *Connection) h_KICK(message *Message) {
 	}
 }
 
-
 // ERR_NICKNAMEINUSE
 func (c *Connection) h_433(message *Message) {
 	c.Nick(c.nickname + "_")
@@ -288,7 +286,7 @@ func (c *Connection) h_PONG(message *Message) {
 		return
 	}
 	delta := time.Duration(time.Now().UnixNano() - theirTime)
-	log.Println("Lag: %v\n", delta)
+	log.Printf("Lag: %v\n", delta)
 }
 
 // generic PRIVMSG callback handling QUIT command and dummy reply.

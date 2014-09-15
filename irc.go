@@ -219,7 +219,7 @@ func (c *Connection) pingLoop() {
 func (c *Connection) write(line string) error {
 	if !c.floodProtection {
 		if t := c.rateLimit(len(line)); t != 0 {
-			log.Println("anti-flood: sleeping for %.2f seconds", t.Seconds())
+			log.Printf("anti-flood: sleeping for %.2f seconds\n", t.Seconds())
 			<-time.After(t)
 		}
 	}

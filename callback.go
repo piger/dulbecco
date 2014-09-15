@@ -82,7 +82,7 @@ func (c *Connection) SetupCallbacks() {
 }
 
 // Add callbacks for every configured plugin.
-func (c *Connection) SetupPlugins(plugins []PluginType) {
+func (c *Connection) SetupPlugins(plugins []PluginConfiguration) {
 	for _, plugin := range plugins {
 		log.Println("Adding callback for plugin:", plugin.Name)
 		c.addPluginCallback(plugin)
@@ -92,7 +92,7 @@ func (c *Connection) SetupPlugins(plugins []PluginType) {
 // Add a callback for a plugin.
 // We use a separate method because we need a "copy" of the "plugin" variable,
 // since it will be bound inside the closure.
-func (c *Connection) addPluginCallback(plugin PluginType) {
+func (c *Connection) addPluginCallback(plugin PluginConfiguration) {
 
 	// this is the actual plugin callback
 	c.AddCallback("PRIVMSG", func(message *Message) {
@@ -155,17 +155,17 @@ func (c *Connection) removeUserChannel(nickname, channelname string) {
 // The INIT pseudo-event is fired when the TCP connection to the IRC
 // server is established successfully.
 func (c *Connection) h_INIT(message *Message) {
-	if len(c.password) > 0 {
-		c.Pass(c.password)
+	if len(c.config.Password) > 0 {
+		c.Pass(c.config.Password)
 	}
 	c.Nick(c.nickname)
-	c.User(c.username, c.realname)
+	c.User(c.config.Username, c.config.Realname)
 }
 
 // 001 numeric means we are "really connected" to the server. In this callback
 // is safe to do things like joining channels or identifying with IRC services.
 func (c *Connection) h_001(message *Message) {
-	for _, channel := range c.channels {
+	for _, channel := range c.config.Channels {
 		c.Join(channel)
 	}
 }
@@ -176,10 +176,7 @@ func (c *Connection) h_JOIN(message *Message) {
 
 	// are we the one joining the channel?
 	if message.Nick == c.nickname {
-		// delete the old entry, if present
-		if _, ok := c.chanmap[*channame]; ok {
-			delete(c.chanmap, *channame)
-		}
+		delete(c.chanmap, *channame)
 		channel := &Channel{name: message.Args[0]}
 		c.chanmap[channel.name] = channel
 		log.Printf("we have joined %s\n", message.Args[0])

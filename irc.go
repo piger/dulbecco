@@ -42,15 +42,13 @@ func NewUser(nickname string) *User {
 
 // A connection to the IRC server, also the main data structure of the IRC bot.
 type Connection struct {
-	// server address+port: "irc.example.com:6667"
-	address string
+	config *ServerConfiguration
 
-	username, realname, nickname, password string
+	// current nickname
+	nickname string
 
-	altnicknames []string
-	channels     []string
-	chanmap      map[string]*Channel
-	usermap      map[string]*User
+	chanmap map[string]*Channel
+	usermap map[string]*User
 
 	// ping frequency
 	pingFreq time.Duration
@@ -84,16 +82,10 @@ type Connection struct {
 	events map[string]map[string]func(*Message)
 }
 
-func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit chan bool) *Connection {
+func NewConnection(config *ServerConfiguration, botConfig *Configuration, quit chan bool) *Connection {
 	conn := &Connection{
-		address:         srvConfig.Address,
-		password:        srvConfig.Password,
-		useTLS:          srvConfig.Ssl,
-		username:        srvConfig.Username,
-		realname:        srvConfig.Realname,
-		nickname:        srvConfig.Nickname,
-		altnicknames:    srvConfig.Altnicknames,
-		channels:        srvConfig.Channels,
+		config:          config,
+		nickname:        config.Nickname,
 		pingFreq:        pingFrequency,
 		chanmap:         make(map[string]*Channel),
 		usermap:         make(map[string]*User),
@@ -107,7 +99,7 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 
 	// setup internal callbacks
 	conn.SetupCallbacks()
-	conn.SetupPlugins(genConfig.Plugins)
+	conn.SetupPlugins(botConfig.Plugins)
 
 	return conn
 }
@@ -115,18 +107,18 @@ func NewConnection(srvConfig *ServerType, genConfig *ConfigurationType, quit cha
 // Connect to the server, launch all internal goroutines.
 func (c *Connection) Connect() (err error) {
 	var conn net.Conn
-	if c.useTLS {
+	if c.config.Ssl {
 		// XXX should use a valid tls client configuration insted of nil (default)
-		conn, err = tls.Dial("tcp", c.address, nil)
+		conn, err = tls.Dial("tcp", c.config.Address, nil)
 	} else {
-		conn, err = net.Dial("tcp", c.address)
+		conn, err = net.Dial("tcp", c.config.Address)
 	}
 	if err != nil {
 		return
 	}
 
 	c.sock = conn
-	log.Println("Connected to:", c.address)
+	log.Println("Connected to:", c.config.Address)
 	c.connected = true
 
 	c.io = bufio.NewReadWriter(

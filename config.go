@@ -6,12 +6,12 @@ import (
 	"log"
 )
 
-type ConfigurationType struct {
-	Servers []ServerType
-	Plugins []PluginType
+type Configuration struct {
+	Servers []ServerConfiguration
+	Plugins []PluginConfiguration
 }
 
-type ServerType struct {
+type ServerConfiguration struct {
 	Name         string
 	Address      string
 	Ssl          bool
@@ -23,19 +23,19 @@ type ServerType struct {
 	Password     string
 }
 
-type PluginType struct {
+type PluginConfiguration struct {
 	Name    string
 	Command string
 	Trigger string
 }
 
-func ReadConfig(filename string) *ConfigurationType {
+func ReadConfig(filename string) *Configuration {
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatal("ERROR Cannot read configuration file: ", err)
 	}
 
-	var config ConfigurationType
+	var config Configuration
 	if err := json.Unmarshal(file, &config); err != nil {
 		log.Fatal("ERROR Cannot parse configuration file: ", err)
 	}

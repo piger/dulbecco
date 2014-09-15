@@ -10,6 +10,7 @@ package dulbecco
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"log"
 	"net"
 	"strings"
@@ -50,9 +51,6 @@ type Connection struct {
 	chanmap map[string]*Channel
 	usermap map[string]*User
 
-	// ping frequency
-	pingFreq time.Duration
-
 	// enable anti-flood protection
 	floodProtection bool
 	// anti-flood internal counters
@@ -72,29 +70,25 @@ type Connection struct {
 	// SSL
 	useTLS bool
 
-	// Control channels
-	cWrite chan bool
-	cEvent chan bool
-	cPing  chan bool
-	CQuit  chan bool
+	inerr  chan error
+	outerr chan bool
+	wg     sync.WaitGroup
 
 	// callbacks
 	events map[string]map[string]func(*Message)
 }
 
-func NewConnection(config *ServerConfiguration, botConfig *Configuration, quit chan bool) *Connection {
+func NewConnection(config *ServerConfiguration, botConfig *Configuration) *Connection {
 	conn := &Connection{
 		config:          config,
 		nickname:        config.Nickname,
-		pingFreq:        pingFrequency,
 		chanmap:         make(map[string]*Channel),
 		usermap:         make(map[string]*User),
-		out:             make(chan string, 32),
-		cWrite:          make(chan bool),
-		cPing:           make(chan bool),
 		floodProtection: true,
 		lastSent:        time.Now(),
-		CQuit:           quit,
+		out:             make(chan string, 32),
+		inerr:           make(chan error, 4),
+		outerr:          make(chan bool, 4),
 	}
 
 	// setup internal callbacks
@@ -102,6 +96,30 @@ func NewConnection(config *ServerConfiguration, botConfig *Configuration, quit c
 	conn.SetupPlugins(botConfig.Plugins)
 
 	return conn
+}
+
+func (c *Connection) MainLoop() {
+	for {
+		err := c.Connect()
+		if err != nil {
+			log.Printf("Connection error: %s\n", err)
+		}
+		if !c.tryReconnect {
+			return
+		}
+
+		c.reinit()
+		time.Sleep(time.Second * 5)
+	}
+}
+
+func (c *Connection) reinit() {
+	close(c.out)
+	close(c.inerr)
+	close(c.outerr)
+	c.out = make(chan string, 32)
+	c.inerr = make(chan error, 4)
+	c.outerr = make(chan bool, 4)
 }
 
 // Connect to the server, launch all internal goroutines.
@@ -123,42 +141,83 @@ func (c *Connection) Connect() (err error) {
 		bufio.NewReader(c.sock),
 		bufio.NewWriter(c.sock))
 
+	c.wg.Add(4)
 	go c.writeLoop()
 	go c.readLoop()
 	go c.pingLoop()
+	go c.errLoop()
 
 	c.RunCallbacks(&Message{Cmd: "INIT"})
+
+	c.wg.Wait()
 
 	return nil
 }
 
+func (c *Connection) errLoop() {
+	defer func() {
+		log.Println("exiting errLoop()")
+		c.wg.Done()
+	}()
+
+	for {
+		select {
+		case err := <-c.inerr:
+			log.Printf("Incoming error: %s\n", err)
+
+			// ensure we have closed the socket
+			c.sock.Close()
+
+			// incoming error from a goroutine
+			for i := 0; i < 4; i++ {
+				c.outerr <- true
+			}
+			return
+		case <-c.outerr:
+			log.Printf("errLoop: alert received, bye!\n")
+			return
+		}
+	}
+}
+
 func (c *Connection) writeLoop() {
+	defer func() {
+		defer log.Println("exiting writeLoop()")
+		defer c.wg.Done()
+	}()
+
 	for {
 		select {
 		case line := <-c.out:
 			err := c.write(line)
 			if err != nil {
 				log.Println("ERROR writing:", err)
-				go c.shutdown()
+				c.inerr <- err
 				return
 			}
-		case <-c.cWrite:
+		case <-c.outerr:
 			return
 		}
 	}
 }
 
 func (c *Connection) readLoop() {
+	defer func() {
+		defer log.Println("exiting readLoop()")
+		defer c.wg.Done()
+	}()
+
 	for {
+		// a read() on a closed socket should always fail, so we can skip
+		// the check on outerr.
 		line, err := c.io.ReadString('\n')
 		if err != nil {
-			log.Println("read failed:", err)
-			go c.shutdown()
+			log.Printf("error reading from socket: %s\n", err)
+			c.inerr <- err
 			return
 		}
 
 		line = strings.TrimRight(line, "\r\n")
-		// log.Println("READ: ", line)
 
 		if message, err := parseMessage(line); err == nil {
 			log.Println("message =", message.Dump())
@@ -170,13 +229,17 @@ func (c *Connection) readLoop() {
 }
 
 func (c *Connection) pingLoop() {
-	tick := time.NewTicker(c.pingFreq)
+	defer func() {
+		defer log.Println("exiting pingLoop()")
+		defer c.wg.Done()
+	}()
 
+	tick := time.NewTicker(pingFrequency)
 	for {
 		select {
 		case <-tick.C:
 			c.ServerPing()
-		case <-c.cPing:
+		case <-c.outerr:
 			tick.Stop()
 			return
 		}
@@ -216,40 +279,7 @@ func (c *Connection) rateLimit(chars int) time.Duration {
 	return 0
 }
 
-func (c *Connection) shutdown() {
-	c.mutex.Lock()
-	log.Println("enter shutdown()")
-
-	if c.connected {
-		log.Println("shutting down connection")
-
-		c.connected = false
-		c.sock.Close()
-		c.cWrite <- true
-		c.cPing <- true
-
-		c.io = nil
-		c.sock = nil
-
-		c.RunCallbacks(&Message{Cmd: "DISCONNECT"})
-
-		if c.tryReconnect {
-			go c.reconnect()
-		} else {
-			c.CQuit <- true
-		}
-		log.Println("end of shutdown")
-	}
-	c.mutex.Unlock()
-	log.Println("exit shutdown()")
-}
-
-func (c *Connection) reconnect() {
-	for {
-		log.Println("Sleeping 5 minutes before trying to reconnect")
-		time.Sleep(5 * time.Minute)
-		if err := c.Connect(); err == nil {
-			return
-		}
-	}
+func (c *Connection) Shutdown() {
+	c.tryReconnect = false
+	c.inerr <- errors.New("shutdown requested")
 }

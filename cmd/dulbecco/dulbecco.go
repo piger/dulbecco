@@ -2,9 +2,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/piger/dulbecco"
 	"log"
+	"os"
+	"os/signal"
+	"sync"
 )
 
 var (
@@ -15,21 +17,36 @@ func main() {
 	flag.Parse()
 
 	config := dulbecco.ReadConfig(*configFile)
-	var connections []dulbecco.Connection
-	quit := make(chan bool)
+	var connections []*dulbecco.Connection
+	var wg sync.WaitGroup
 
 	for _, server := range config.Servers {
 		log.Printf("Connecting to: %s\n", server.Address)
 
-		conn := dulbecco.NewConnection(&server, config, quit)
-		if err := conn.Connect(); err != nil {
-			fmt.Printf("error connecting to server: %s\n", err)
-			return
-		}
-		connections = append(connections, *conn)
+		wg.Add(1)
+		conn := dulbecco.NewConnection(&server, config)
+		connections = append(connections, conn)
+		go func() {
+			conn.MainLoop()
+			wg.Done()
+		}()
 	}
 
-	for i := 0; i < len(config.Servers); i++ {
-		<-quit
+	cExit := make(chan bool)
+	go func() {
+		wg.Wait()
+		cExit <- true
+	}()
+
+	csig := make(chan os.Signal, 1)
+	signal.Notify(csig, os.Interrupt)
+	select {
+	case <-csig:
+		log.Printf("ctrl-c received\n")
+		for _, conn := range connections {
+			conn.Shutdown()
+		}
+	case <-cExit:
+		return
 	}
 }

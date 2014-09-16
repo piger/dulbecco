@@ -126,7 +126,7 @@ func (mdb *MarkovDB) Generate(seed string) error {
 	}
 	for i, token := range tokens {
 		ngram := token[0 : len(token)-1]
-		// fmt.Printf("ngram = %q\n", ngram)
+		fmt.Printf("ngram = %q\n", ngram)
 
 		phrase := mdb.Goo(ngram)
 		if phrase == seed {
@@ -161,6 +161,7 @@ func (mdb *MarkovDB) Goo(ngramKey []string) string {
 	for i := 0; i < 20; i++ {
 		followWord, err := mdb.GetRandom(key)
 		if err != nil || followWord == "\n" {
+			fmt.Printf("no follow for %s\n", key)
 			break
 		}
 		result = append(result, followWord)
@@ -203,6 +204,22 @@ func (mdb *MarkovDB) Close() {
 }
 
 func main() {
+	flag.Parse()
+
+	key, err := MakeKey([]string{"pippo", "pluto"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("test key = %s\n", key)
+
+	if *generate {
+		TestMarkov()
+	} else {
+		ReadStdin()
+	}
+}
+
+func TestMarkov() {
 	mdb, err := NewMarkovDB(2, "petodb")
 	if err != nil {
 		log.Fatal(err)
@@ -216,7 +233,41 @@ func main() {
 		if strings.HasPrefix(text, "quit") {
 			break
 		}
-		mdb.ReadSentence(text)
+		// mdb.ReadSentence(text)
 		mdb.Generate(text)
+	}
+}
+
+func ReadStdin() {
+	mdb, err := NewMarkovDB(2, "petodb")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer mdb.Close()
+
+	i := 1
+	var buf string
+
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		text, err := reader.ReadString('\n')
+		if err != nil {
+			log.Print(err)
+			break
+		}
+
+		text = strings.TrimRight(text, "\n")
+		if text == "" {
+			text = "\n"
+		}
+
+		if i%2 == 0 {
+			fmt.Printf("Put %s -> %q\n", buf, text)
+			mdb.Put([]byte(buf), text)
+		} else {
+			buf = text
+		}
+
+		i++
 	}
 }

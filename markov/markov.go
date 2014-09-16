@@ -6,10 +6,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/jmhodges/levigo"
+	"log"
 	"math/rand"
 	"os"
 	"strings"
-	"time"
 )
 
 var (
@@ -18,7 +18,21 @@ var (
 	generate = flag.Bool("gen", false, "Generate some blabla")
 )
 
-const beginningKey = "*BEGINNING*"
+func tokenize(order int, sentence string) ([][]string, error) {
+	var result [][]string
+
+	words := strings.Fields(sentence)
+	if len(words) < order {
+		return result, fmt.Errorf("Sentence too short for order %d\n", order)
+	}
+	words = append(words, "\n")
+
+	for i := 0; i < len(words)-order; i++ {
+		ngram := words[i : i+order+1]
+		result = append(result, ngram)
+	}
+	return result, nil
+}
 
 func MakeKey(ngram []string) ([]byte, error) {
 	return json.Marshal(ngram)
@@ -46,41 +60,20 @@ func NewMarkovDB(order int, dbfile string) (*MarkovDB, error) {
 	return mdb, nil
 }
 
-func (mdb *MarkovDB) ReadFile(filename string) error {
-	file, err := os.Open(filename)
+func (mdb *MarkovDB) ReadSentence(sentence string) {
+	tokens, err := tokenize(mdb.Order, sentence)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		words := strings.Fields(scanner.Text())
-		if len(words) < mdb.Order {
-			continue
-		}
-		words = append(words, "\n")
-
-		beginning := words[0:mdb.Order]
-		err := mdb.PutBeginning(beginning)
+	for _, token := range tokens {
+		ngram := token[0 : len(token)-1]
+		follow := token[len(token)-1]
+		key, err := MakeKey(ngram)
 		if err != nil {
-			return err
+			log.Fatal(err)
 		}
-
-		for i := 0; i < len(words)-mdb.Order-1; i++ {
-			ngram := words[i : i+mdb.Order]
-			follow := words[i+mdb.Order]
-			fmt.Printf("%v -> %s\n", ngram, follow)
-			key, err := MakeKey(ngram)
-			if err != nil {
-				return err
-			}
-			mdb.Put(key, follow)
-		}
-		fmt.Println(".")
+		mdb.Put(key, follow)
 	}
-
-	return nil
 }
 
 func (mdb *MarkovDB) Put(key []byte, value string) error {
@@ -105,6 +98,11 @@ func (mdb *MarkovDB) Put(key []byte, value string) error {
 	}
 
 	// append the new word to the value and serialize the result
+	for _, word := range words {
+		if word == value {
+			return nil
+		}
+	}
 	words = append(words, value)
 	newwords, err := json.Marshal(words)
 	if err != nil {
@@ -116,86 +114,63 @@ func (mdb *MarkovDB) Put(key []byte, value string) error {
 	return err
 }
 
-type JsonBeginnings struct {
-	Beginnings []*JsonBeginnings
-}
-
-type JsonBeginning struct {
-	Ngrams []string
-}
-
-func (mdb *MarkovDB) PutBeginning(ngram []string) error {
+func (mdb *MarkovDB) Generate(seed string) error {
 	ro := levigo.NewReadOptions()
-	wo := levigo.NewWriteOptions()
 	defer ro.Close()
-	defer wo.Close()
 
-	jsondata, err := mdb.Db.Get(ro, []byte(beginningKey))
+	var phrases []string
+
+	tokens, err := tokenize(mdb.Order, seed)
 	if err != nil {
-		return err
+		log.Fatal(err)
+	}
+	for i, token := range tokens {
+		ngram := token[0 : len(token)-1]
+		// fmt.Printf("ngram = %q\n", ngram)
+
+		phrase := mdb.Goo(ngram)
+		if phrase == seed {
+			continue
+		}
+		phrases = append(phrases, phrase)
+		fmt.Printf("* phrase %d: %s\n", i, phrase)
 	}
 
-	var jsonbeginnings [][]string
-	if jsondata != nil && string(jsondata) != "" {
-		err = json.Unmarshal(jsondata, &jsonbeginnings)
-		if err != nil {
-			return err
+	var result string
+	for _, phrase := range phrases {
+		if len(phrase) > len(result) {
+			result = phrase
 		}
 	}
-	jsonbeginnings = append(jsonbeginnings, ngram)
 
-	newbeginnings, err := json.Marshal(jsonbeginnings)
-	if err != nil {
-		return nil
-	}
+	fmt.Printf("%s\n", result)
 
-	// fmt.Printf("newbeginnings = %s\n", newbeginnings)
-
-	err = mdb.Db.Put(wo, []byte(beginningKey), newbeginnings)
-	return err
+	return nil
 }
 
-func (mdb *MarkovDB) Generate() error {
-	ro := levigo.NewReadOptions()
-	defer ro.Close()
-
-	jsonbeginnings, err := mdb.Db.Get(ro, []byte(beginningKey))
-	if err != nil {
-		return err
-	}
-
-	// fmt.Printf("jsonbeginnings = %s\n", jsonbeginnings)
-
-	var beginnings [][]string
-	err = json.Unmarshal(jsonbeginnings, &beginnings)
-	if err != nil {
-		return err
-	}
-
-	ngramKey := beginnings[rand.Intn(len(beginnings))]
-	// fmt.Printf("ngramKey = %s\n", ngramKey)
+func (mdb *MarkovDB) Goo(ngramKey []string) string {
 	key, err := MakeKey(ngramKey)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
+	var result []string = make([]string, len(ngramKey))
+	copy(result, ngramKey)
+
+	// fmt.Printf("result (1): %q (%q)\n", result, ngramKey)
 
 	for i := 0; i < 20; i++ {
 		followWord, err := mdb.GetRandom(key)
-		if err != nil {
-			// no value for this key!
+		if err != nil || followWord == "\n" {
 			break
 		}
-		fmt.Printf("%s ", followWord)
+		result = append(result, followWord)
 		ngramKey = append(ngramKey[1:], followWord)
 		key, err = MakeKey(ngramKey)
 		if err != nil {
 			break
 		}
 	}
-
-	fmt.Println()
-
-	return nil
+	return strings.Join(result, " ")
 }
 
 func (mdb *MarkovDB) GetRandom(key []byte) (string, error) {
@@ -218,6 +193,8 @@ func (mdb *MarkovDB) GetRandom(key []byte) (string, error) {
 
 	word := follows[rand.Intn(len(follows))]
 
+	fmt.Printf("random for %q: %q\n", key, word)
+
 	return word, nil
 }
 
@@ -226,30 +203,20 @@ func (mdb *MarkovDB) Close() {
 }
 
 func main() {
-	flag.Parse()
-
-	mdb, err := NewMarkovDB(*order, *dbfile)
+	mdb, err := NewMarkovDB(2, "petodb")
 	if err != nil {
-		fmt.Print(err)
-		return
+		log.Fatal(err)
 	}
+	defer mdb.Close()
 
-	if *generate {
-		rand.Seed(time.Now().UnixNano())
-
-		err = mdb.Generate()
-		if err != nil {
-			fmt.Print(err)
-			return
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("> ")
+		text, _ := reader.ReadString('\n')
+		if strings.HasPrefix(text, "quit") {
+			break
 		}
-	} else {
-		for _, filename := range flag.Args() {
-			if err := mdb.ReadFile(filename); err != nil {
-				fmt.Print(err)
-				return
-			}
-		}
+		mdb.ReadSentence(text)
+		mdb.Generate(text)
 	}
-
-	mdb.Close()
 }

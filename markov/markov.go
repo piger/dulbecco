@@ -1,4 +1,4 @@
-package main
+package markov
 
 import (
 	"bufio"
@@ -45,7 +45,7 @@ type MarkovDB struct {
 
 func NewMarkovDB(order int, dbfile string) (*MarkovDB, error) {
 	opts := levigo.NewOptions()
-	opts.SetCache(levigo.NewLRUCache(3 << 30))
+	// opts.SetCache(levigo.NewLRUCache(3 << 30))
 	opts.SetCreateIfMissing(true)
 	db, err := levigo.Open(dbfile, opts)
 	if err != nil {
@@ -63,14 +63,16 @@ func NewMarkovDB(order int, dbfile string) (*MarkovDB, error) {
 func (mdb *MarkovDB) ReadSentence(sentence string) {
 	tokens, err := tokenize(mdb.Order, sentence)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("ReadSentence error:", err)
+		return
 	}
 	for _, token := range tokens {
 		ngram := token[0 : len(token)-1]
 		follow := token[len(token)-1]
 		key, err := MakeKey(ngram)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("ReadSentence error:", err)
+			return
 		}
 		mdb.Put(key, follow)
 	}
@@ -114,7 +116,7 @@ func (mdb *MarkovDB) Put(key []byte, value string) error {
 	return err
 }
 
-func (mdb *MarkovDB) Generate(seed string) error {
+func (mdb *MarkovDB) Generate(seed string) string {
 	ro := levigo.NewReadOptions()
 	defer ro.Close()
 
@@ -122,7 +124,8 @@ func (mdb *MarkovDB) Generate(seed string) error {
 
 	tokens, err := tokenize(mdb.Order, seed)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Generate() error inside tokenize:", err)
+		return ""
 	}
 	for i, token := range tokens {
 		ngram := token[0 : len(token)-1]
@@ -145,13 +148,14 @@ func (mdb *MarkovDB) Generate(seed string) error {
 
 	fmt.Printf("%s\n", result)
 
-	return nil
+	return result
 }
 
 func (mdb *MarkovDB) Goo(ngramKey []string) string {
 	key, err := MakeKey(ngramKey)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Goo error (MakeKey):", err)
+		return ""
 	}
 	var result []string = make([]string, len(ngramKey))
 	copy(result, ngramKey)

@@ -291,14 +291,36 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 	if strings.HasPrefix(message.Args[1], "!quit") &&
 		message.Nick == "sand" {
 		c.Quit()
+		return
 	} else if !strings.HasPrefix(message.Args[1], c.nickname) {
 		return
 	}
 
+	// strip our own nickname from the input text
+	text := message.Args[1]
+	text = text[len(c.nickname):]
+
+	colon := strings.Index(text[0:5], ":")
+	if colon != -1 {
+		text = text[colon+1:]
+		text = strings.TrimSpace(text)
+	}
+
+	// markov!
+	c.mdb.ReadSentence(text)
+	reply := c.mdb.Generate(text)
+
+	// do not bother answering if the answer is the same as the input phrase
+	if reply == text || len(reply) == 0 {
+		return
+	}
+
 	if message.IsFromChannel() {
-		c.Privmsg(message.Args[0], message.Nick+" ciao a te")
+		c.Privmsg(message.Args[0], message.Nick+": " + reply)
+		// c.Privmsg(message.Args[0], message.Nick+" ciao a te")
 	} else {
-		c.Privmsg(message.Nick, "ehy ciao")
+		c.Privmsg(message.Nick, reply)
+		// c.Privmsg(message.Nick, "ehy ciao")
 	}
 }
 

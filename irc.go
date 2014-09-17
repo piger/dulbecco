@@ -11,6 +11,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
+	"github.com/piger/dulbecco/markov"
 	"log"
 	"net"
 	"strings"
@@ -47,7 +48,7 @@ func NewUser(nickname string) *User {
 
 // A connection to the IRC server, also the main data structure of the IRC bot.
 type Connection struct {
-	config *ServerConfiguration
+	config ServerConfiguration
 
 	// current nickname
 	nickname string
@@ -74,15 +75,19 @@ type Connection struct {
 	// SSL
 	useTLS bool
 
+	// Internal channels
 	inerr  chan error
 	outerr chan bool
 	wg     sync.WaitGroup
+
+	// markov database
+	mdb *markov.MarkovDB
 
 	// callbacks
 	events map[string]map[string]func(*Message)
 }
 
-func NewConnection(config *ServerConfiguration, botConfig *Configuration) *Connection {
+func NewConnection(config ServerConfiguration, botConfig *Configuration, mdb *markov.MarkovDB) *Connection {
 	conn := &Connection{
 		config:          config,
 		nickname:        config.Nickname,
@@ -93,6 +98,7 @@ func NewConnection(config *ServerConfiguration, botConfig *Configuration) *Conne
 		out:             make(chan string, 32),
 		inerr:           make(chan error, numLoops),
 		outerr:          make(chan bool, numLoops),
+		mdb:             mdb,
 	}
 
 	// setup internal callbacks

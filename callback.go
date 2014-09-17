@@ -162,11 +162,19 @@ func (c *Connection) h_INIT(message *Message) {
 	c.User(c.config.Username, c.config.Realname)
 }
 
+func (c *Connection) JoinChannels() {
+	for _, channel := range c.config.Channels {
+		c.Join(channel)
+	}
+}
+
 // 001 numeric means we are "really connected" to the server. In this callback
 // is safe to do things like joining channels or identifying with IRC services.
 func (c *Connection) h_001(message *Message) {
-	for _, channel := range c.config.Channels {
-		c.Join(channel)
+	if c.config.Nickserv != "" {
+		c.LoginNickserv()
+	} else {
+		c.JoinChannels()
 	}
 }
 
@@ -292,7 +300,11 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 		message.Nick == "sand" {
 		c.Quit()
 		return
+	} else if message.Nick == NickservName && strings.Index(message.Args[1], "accepted") != -1 {
+		c.JoinChannels()
+		return
 	} else if !strings.HasPrefix(message.Args[1], c.nickname) {
+		c.mdb.ReadSentence(message.Args[1])
 		return
 	}
 
@@ -312,11 +324,12 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 
 	// do not bother answering if the answer is the same as the input phrase
 	if reply == text || len(reply) == 0 {
+		c.Privmsg(message.Args[0], message.Nick+": "+"DEMENZA MI COLSE")
 		return
 	}
 
 	if message.IsFromChannel() {
-		c.Privmsg(message.Args[0], message.Nick+": " + reply)
+		c.Privmsg(message.Args[0], message.Nick+": "+reply)
 		// c.Privmsg(message.Args[0], message.Nick+" ciao a te")
 	} else {
 		c.Privmsg(message.Nick, reply)

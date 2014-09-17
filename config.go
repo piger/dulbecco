@@ -21,6 +21,7 @@ type ServerConfiguration struct {
 	Username     string
 	Realname     string
 	Password     string
+	Nickserv     string
 }
 
 type PluginConfiguration struct {

@@ -25,7 +25,11 @@ var (
 
 // the number of *Loop() methods on Connection; it's used for synchronization
 // and must be updated accordingly.
-const numLoops = 4
+const (
+	numLoops = 4
+
+	NickservName = "Nickserv"
+)
 
 type Channel struct {
 	name, topic string

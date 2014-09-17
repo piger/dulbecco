@@ -140,3 +140,8 @@ func (c *Connection) Ctcp(target, args string) {
 func (c *Connection) CtcpReply(target, args string) {
 	c.Noticef(target, "\001%s\001", args)
 }
+
+// IDENTIFY to NickServ
+func (c *Connection) LoginNickserv() {
+	c.Privmsgf(NickservName, "IDENTIFY %s", c.config.Nickserv)
+}

@@ -70,6 +70,7 @@ func (c *Connection) SetupCallbacks() {
 	c.AddCallback("001", c.h_001)
 	c.AddCallback("433", c.h_433)
 	c.AddCallback("PRIVMSG", c.h_PRIVMSG)
+	c.AddCallback("NOTICE", c.h_NOTICE)
 	c.AddCallback("PING", c.h_PING)
 	c.AddCallback("PONG", c.h_PONG)
 	c.AddCallback("CTCP", c.h_CTCP)
@@ -334,6 +335,14 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 	} else {
 		c.Privmsg(message.Nick, reply)
 		// c.Privmsg(message.Nick, "ehy ciao")
+	}
+}
+
+func (c *Connection) h_NOTICE(message *Message) {
+	nick := strings.ToLower(message.Nick)
+	if nick == NickservName && strings.Index(message.Args[1], "accepted") != -1 {
+		c.JoinChannels()
+		return
 	}
 }
 

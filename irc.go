@@ -28,7 +28,7 @@ var (
 const (
 	numLoops = 4
 
-	NickservName = "NickServ"
+	NickservName = "nickserv"
 )
 
 type Channel struct {

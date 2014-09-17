@@ -13,10 +13,18 @@ import (
 var (
 	configFile = flag.String("config", "./config.json", "Path to the configuration file")
 	markovDb   = flag.String("mdb", "./markov-db", "Path to the directory containing the Markov DB")
+	importDb   = flag.Bool("import", false, "Enable import mode")
 )
+
+const markovOrder = 2
 
 func main() {
 	flag.Parse()
+
+	if *importDb {
+		markov.ReadStdin(*markovDb, markovOrder)
+		return
+	}
 
 	config := dulbecco.ReadConfig(*configFile)
 	if len(config.Servers) < 1 {

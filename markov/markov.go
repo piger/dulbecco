@@ -3,19 +3,12 @@ package markov
 import (
 	"bufio"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/jmhodges/levigo"
 	"log"
 	"math/rand"
 	"os"
 	"strings"
-)
-
-var (
-	dbfile   = flag.String("db", "markov.db", "Path to database file")
-	order    = flag.Int("order", 2, "N-Gram order")
-	generate = flag.Bool("gen", false, "Generate some blabla")
 )
 
 func tokenize(order int, sentence string) ([][]string, error) {
@@ -207,22 +200,6 @@ func (mdb *MarkovDB) Close() {
 	mdb.Db.Close()
 }
 
-func main() {
-	flag.Parse()
-
-	key, err := MakeKey([]string{"pippo", "pluto"})
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("test key = %s\n", key)
-
-	if *generate {
-		TestMarkov()
-	} else {
-		ReadStdin()
-	}
-}
-
 func TestMarkov() {
 	mdb, err := NewMarkovDB(2, "petodb")
 	if err != nil {
@@ -242,8 +219,8 @@ func TestMarkov() {
 	}
 }
 
-func ReadStdin() {
-	mdb, err := NewMarkovDB(2, "petodb")
+func ReadStdin(dbpath string, order int) {
+	mdb, err := NewMarkovDB(order, dbpath)
 	if err != nil {
 		log.Fatal(err)
 	}

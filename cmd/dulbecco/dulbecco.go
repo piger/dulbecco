@@ -14,6 +14,7 @@ var (
 	configFile = flag.String("config", "./config.json", "Path to the configuration file")
 	markovDb   = flag.String("mdb", "./markov-db", "Path to the directory containing the Markov DB")
 	importDb   = flag.Bool("import", false, "Enable import mode")
+	importFile = flag.String("train", "", "Train with a IRC log file")
 )
 
 const markovOrder = 2
@@ -23,6 +24,11 @@ func main() {
 
 	if *importDb {
 		markov.ReadStdin(*markovDb, markovOrder)
+		return
+	} else if *importFile != "" {
+		if err := markov.ReadFile(*markovDb, *importFile, markovOrder); err != nil {
+			log.Fatal(err)
+		}
 		return
 	}
 

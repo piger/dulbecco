@@ -11,6 +11,10 @@ import (
 	"strings"
 )
 
+var (
+	MaxPhraseLength = 50
+)
+
 func tokenize(order int, sentence string) ([][]string, error) {
 	var result [][]string
 
@@ -38,7 +42,7 @@ type MarkovDB struct {
 
 func NewMarkovDB(order int, dbfile string) (*MarkovDB, error) {
 	opts := levigo.NewOptions()
-	// opts.SetCache(levigo.NewLRUCache(3 << 30))
+	opts.SetCache(levigo.NewLRUCache(3 << 29))
 	opts.SetCreateIfMissing(true)
 	db, err := levigo.Open(dbfile, opts)
 	if err != nil {
@@ -120,16 +124,16 @@ func (mdb *MarkovDB) Generate(seed string) string {
 		log.Println("Generate() error inside tokenize:", err)
 		return ""
 	}
-	for i, token := range tokens {
+	for _, token := range tokens {
 		ngram := token[0 : len(token)-1]
-		fmt.Printf("ngram = %q\n", ngram)
+		// fmt.Printf("ngram = %q\n", ngram)
 
 		phrase := mdb.Goo(ngram)
 		if phrase == seed {
 			continue
 		}
 		phrases = append(phrases, phrase)
-		fmt.Printf("* phrase %d: %s\n", i, phrase)
+		// fmt.Printf("* phrase %d: %s\n", i, phrase)
 	}
 
 	var result string
@@ -139,7 +143,7 @@ func (mdb *MarkovDB) Generate(seed string) string {
 		}
 	}
 
-	fmt.Printf("%s\n", result)
+	// fmt.Printf("%s\n", result)
 
 	return result
 }
@@ -155,10 +159,13 @@ func (mdb *MarkovDB) Goo(ngramKey []string) string {
 
 	// fmt.Printf("result (1): %q (%q)\n", result, ngramKey)
 
-	for i := 0; i < 20; i++ {
+	for i := 0; i < MaxPhraseLength; i++ {
 		followWord, err := mdb.GetRandom(key)
 		if err != nil || followWord == "\n" {
-			fmt.Printf("no follow for %s\n", key)
+			// fmt.Printf("no follow for %s\n", key)
+			break
+		}
+		if followWord == "\n" {
 			break
 		}
 		result = append(result, followWord)
@@ -191,7 +198,7 @@ func (mdb *MarkovDB) GetRandom(key []byte) (string, error) {
 
 	word := follows[rand.Intn(len(follows))]
 
-	fmt.Printf("random for %q: %q\n", key, word)
+	// fmt.Printf("random for %q: %q\n", key, word)
 
 	return word, nil
 }
@@ -250,5 +257,34 @@ func ReadStdin(dbpath string, order int) {
 		}
 
 		i++
+	}
+}
+
+func ReadFile(dbpath, filename string, order int) error {
+	mdb, err := NewMarkovDB(order, dbpath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer mdb.Close()
+
+	var reader *bufio.Reader
+
+	if filename == "-" {
+		reader = bufio.NewReader(os.Stdin)
+	} else {
+		file, err := os.Open(filename)
+		if err != nil {
+			return err
+		}
+		reader = bufio.NewReader(file)
+	}
+
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		line = strings.TrimRight(line, "\r\n")
+		mdb.ReadSentence(line)
 	}
 }

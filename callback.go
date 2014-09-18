@@ -26,7 +26,7 @@ func (c *Connection) AddCallback(name string, callback func(*Message)) string {
 	hash.Write(rawId)
 	id := fmt.Sprintf("%x", hash.Sum(nil))
 	c.events[name][id] = callback
-	log.Println("Registered callback:", id)
+	// log.Println("Registered callback:", id)
 	return id
 }
 
@@ -305,19 +305,14 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 		c.JoinChannels()
 		return
 	} else if !strings.HasPrefix(message.Args[1], c.nickname) {
+		// it's not a message directed to us, but we can still train markov from it
 		c.mdb.ReadSentence(message.Args[1])
 		return
 	}
 
 	// strip our own nickname from the input text
-	text := message.Args[1]
-	text = text[len(c.nickname):]
-
-	colon := strings.Index(text[0:5], ":")
-	if colon != -1 {
-		text = text[colon+1:]
-		text = strings.TrimSpace(text)
-	}
+	renick := regexp.MustCompile(fmt.Sprintf("%s *: *", c.nickname))
+	text := renick.ReplaceAllLiteralString(message.Args[1], "")
 
 	// markov!
 	c.mdb.ReadSentence(text)

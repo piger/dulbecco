@@ -260,6 +260,16 @@ func ReadStdin(dbpath string, order int) {
 	}
 }
 
+// To read from a IRC log file with a format like:
+//
+//    Dec 19 15:24:41 <user>    hello world!
+//
+// You can cleanup the log running:
+//
+// awk '$4 ~ /^</ { print }' < irc.log | cut -d '>' -f 2- | sed 's/^_TAB_//'
+//
+// Where _TAB_ is 'C-v TAB' from a bash shell.
+
 func ReadFile(dbpath, filename string, order int) error {
 	mdb, err := NewMarkovDB(order, dbpath)
 	if err != nil {

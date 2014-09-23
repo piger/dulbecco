@@ -1,24 +1,46 @@
 {
-    "configuration": {
-        "nickname": "pinolo",
-        "altnicknames": ["pinolo_", "pinolo__", "pinolo^"],
-        "username": "pinolo",
-        "realname": "Pinot di pinolo",
-        "servers": [
-            {
-                "name": "localhost",
-                "address": "localhost:6667",
-                "ssl": false,
-                "password": "secret",
-                "nickname": "PINOLO"
-            }
-        ],
-        "plugins": [
-            {
-                "name": "uname",
-                "command": "/usr/bin/uname -a",
-                "trigger": "!uname"
-            }
-        ]
-    }
+    "servers": [
+        {
+            "name": "localhost",
+            "address": "127.0.0.1:6667",
+            "ssl": false,
+            "nickname": "pinolo",
+            "altnicknames": ["pinolo_", "pinolo__", "pinolo^"],
+            "username": "pinolo",
+            "realname": "Pinot di pinolo",
+            "channels": ["#pizza"]
+        }
+    ],
+    "plugins": [
+        {
+            "name": "prcd",
+            "command": "./plugins/prcd/prcd",
+            "trigger": "^!prcd$"
+        },
+        {
+            "name": "prcd-cowsay",
+            "command": "./plugins/prcd/prcd -cow",
+            "trigger": "^!PRCD$"
+        },
+        {
+            "name": "quotes-read",
+            "command": "./quotes-plugin --dbfile db.sqlite --indexdir idx random",
+            "trigger": "^!q$"
+        },
+        {
+            "name": "quotes-get-by-id",
+            "command": "./quotes-plugin --dbfile db.sqlite --indexdir idx get {{ .id }}",
+            "trigger": "^!q (?P<id>\\d+)$"
+        },
+        {
+            "name": "quotes-add",
+            "command": "./quotes-plugin --dbfile db.sqlite --indexdir idx add {{ .quote }}",
+            "trigger": "^!addq (?P<quote>.*)"
+        },
+        {
+            "name": "quotes-search",
+            "command": "./quotes-plugin --dbfile db.sqlite --indexdir idx search {{ .args }}",
+            "trigger": "^!s (?P<args>.*)"
+        }
+    ]
 }

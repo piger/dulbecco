@@ -99,6 +99,9 @@ func (c *Connection) addPluginCallback(plugin PluginConfiguration) {
 
 	// this is the actual plugin callback
 	c.AddCallback("PRIVMSG", func(message *Message) {
+		// "trigger" contains a regular expression with optional capture groups
+		// command is a text/template that can contain captures from the trigger
+		// regexp.
 		re := regexp.MustCompile(plugin.Trigger)
 		match := re.FindStringSubmatch(message.Args[1])
 		if match == nil {

@@ -1,6 +1,7 @@
 package dulbecco
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"fmt"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 )
 
@@ -97,18 +99,33 @@ func (c *Connection) addPluginCallback(plugin PluginConfiguration) {
 
 	// this is the actual plugin callback
 	c.AddCallback("PRIVMSG", func(message *Message) {
-		matched, err := regexp.MatchString(plugin.Trigger, message.Args[1])
+		re := regexp.MustCompile(plugin.Trigger)
+		match := re.FindStringSubmatch(message.Args[1])
+		if match == nil {
+			return
+		}
+		captures := make(map[string]string)
+		for i, name := range re.SubexpNames() {
+			if i == 0 || name == "" {
+				continue
+			}
+			captures[name] = match[i]
+		}
+		cmdtpl, err := template.New("cmd").Parse(plugin.Command)
 		if err != nil {
-			log.Printf("Error in regexp for plugin %s: %s\n", plugin.Name, err)
+			log.Printf("Cannot parse template: %s\n", err)
 			return
 		}
-		if !matched {
+		var cmdbuf bytes.Buffer
+		if err := cmdtpl.Execute(&cmdbuf, captures); err != nil {
+			log.Printf("Cannot execute template: %s\n", err)
 			return
 		}
+		cmdline := cmdbuf.String()
 
-		log.Println("Running plugin:", plugin.Name)
+		log.Printf("Running plugin %s: %s", plugin.Name, cmdline)
 
-		cmds := strings.Fields(plugin.Command)
+		cmds := strings.Fields(cmdline)
 		cmd := exec.Command(cmds[0], cmds[1:]...)
 		env := []string{
 			"IRC_NICKNAME=" + message.Nick,

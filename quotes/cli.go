@@ -61,9 +61,10 @@ func main() {
 			Action: cmdAddQuote,
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "author",
-					Value: "",
-					Usage: "Quote author",
+					Name:   "author",
+					Value:  "",
+					Usage:  "Quote author",
+					EnvVar: "IRC_NICKNAME",
 				},
 			},
 		},

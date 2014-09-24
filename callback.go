@@ -319,6 +319,8 @@ func (c *Connection) h_PONG(message *Message) {
 func (c *Connection) h_PRIVMSG(message *Message) {
 	if strings.HasPrefix(message.Args[1], "!quit") &&
 		message.Nick == "sand" {
+		// XXX we should find a smarter way to disable auto-reconnect
+		c.tryReconnect = false
 		c.Quit()
 		return
 	} else if message.Nick == NickservName && strings.Index(message.Args[1], "accepted") != -1 {

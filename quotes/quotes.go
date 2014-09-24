@@ -9,10 +9,6 @@ import (
 	"strconv"
 )
 
-const (
-	maxResultsPerSearch = 5
-)
-
 var schemaStmt = `CREATE TABLE if not exists quotes
 (id INTEGER NOT NULL, creation_date DATETIME, author VARCHAR, quote TEXT, karma INTEGER, PRIMARY KEY (id))`
 

@@ -1,10 +1,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/blevesearch/bleve"
 	"github.com/codegangsta/cli"
+	"math"
 	"strings"
+)
+
+const (
+	maxResultsPerSearch = 5
 )
 
 func cmdSearch(ctx *cli.Context) {
@@ -15,12 +21,13 @@ func cmdSearch(ctx *cli.Context) {
 }
 
 func (q *QuotesDB) SearchQuote(qstring string, page int) error {
+	if page < 1 {
+		return errors.New("Invalid page requested")
+	}
 	// query := bleve.NewQueryStringQuery(qstring)
 	query := bleve.NewMatchQuery(qstring).SetField("quote")
-	var from int
-	if page > 1 {
-		from = (page - 1) * maxResultsPerSearch
-	}
+	from := (page - 1) * maxResultsPerSearch
+
 	request := bleve.NewSearchRequestOptions(query, maxResultsPerSearch, from, false)
 	request.Fields = append(request.Fields, []string{"id", "quote"}...)
 	results, err := q.idx.Search(request)
@@ -29,8 +36,8 @@ func (q *QuotesDB) SearchQuote(qstring string, page int) error {
 	}
 
 	if len(results.Hits) > 0 {
-		totPages := float64(results.Total) / float64(maxResultsPerSearch)
-		fmt.Printf("%d matches, showing page %d of %2.f\n", results.Total, page, totPages)
+		totPages := int(math.Ceil(float64(results.Total) / float64(maxResultsPerSearch)))
+		fmt.Printf("%d matches, showing page %d of %d\n", results.Total, page, totPages)
 
 		for _, hit := range results.Hits {
 			fmt.Printf("%s: %s\n", hit.ID, hit.Fields["quote"])

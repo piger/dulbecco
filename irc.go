@@ -29,6 +29,10 @@ const (
 	numLoops = 4
 
 	NickservName = "nickserv"
+
+	// IRC defines a maximum "line" length of 512 characters, including \r\n,
+	// the command and all parameters. On Azzurra the limit seems to be lower...
+	MaximumCommandLength = 460
 )
 
 type Channel struct {

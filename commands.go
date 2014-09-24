@@ -6,6 +6,35 @@ import (
 	"time"
 )
 
+const (
+	privmsgLen = len("PRIVMSG")
+	noticeLen  = len("NOTICE")
+)
+
+func splitPhrase(cmd, phrase string) []string {
+	cmdLen, phraseLen := len(cmd), len(phrase)
+
+	if cmdLen+phraseLen < MaximumCommandLength {
+		return []string{phrase}
+	}
+
+	var result []string
+	var t int
+	maxLength := MaximumCommandLength - cmdLen
+
+	for len(phrase) > 0 {
+		l := len(phrase)
+		if maxLength < l {
+			t = maxLength
+		} else {
+			t = l
+		}
+		result = append(result, phrase[0:t])
+		phrase = phrase[t:]
+	}
+	return result
+}
+
 // send a "raw" line to the server
 func (c *Connection) Raw(s string) {
 	c.out <- fmt.Sprintf("%s\r\n", s)
@@ -61,7 +90,10 @@ func (c *Connection) Quit(message ...string) {
 
 // PRIVMSG command
 func (c *Connection) Privmsg(target, message string) {
-	c.Rawf("PRIVMSG %s :%s", target, message)
+	cmd := fmt.Sprintf("PRIVMSG %s :", target)
+	for _, phrase := range splitPhrase(cmd, message) {
+		c.Rawf(cmd + phrase)
+	}
 }
 
 // PRIVMSG with format string
@@ -71,7 +103,10 @@ func (c *Connection) Privmsgf(target, format string, a ...interface{}) {
 
 // NOTICE command
 func (c *Connection) Notice(target, message string) {
-	c.Rawf("NOTICE %s :%s", target, message)
+	cmd := fmt.Sprintf("NOTICE %s :", target)
+	for _, phrase := range splitPhrase(cmd, message) {
+		c.Rawf(cmd + phrase)
+	}
 }
 
 func (c *Connection) Noticef(target, format string, a ...interface{}) {

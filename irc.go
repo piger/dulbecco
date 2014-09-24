@@ -103,6 +103,7 @@ func NewConnection(config ServerConfiguration, botConfig *Configuration, mdb *ma
 		inerr:           make(chan error, numLoops),
 		outerr:          make(chan bool, numLoops),
 		mdb:             mdb,
+		tryReconnect:    true,
 	}
 
 	// setup internal callbacks

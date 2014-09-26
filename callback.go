@@ -348,10 +348,8 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 
 	if message.IsFromChannel() {
 		c.Privmsg(message.Args[0], message.Nick+": "+reply)
-		// c.Privmsg(message.Args[0], message.Nick+" ciao a te")
 	} else {
 		c.Privmsg(message.Nick, reply)
-		// c.Privmsg(message.Nick, "ehy ciao")
 	}
 }
 

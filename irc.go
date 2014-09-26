@@ -33,6 +33,8 @@ const (
 	// IRC defines a maximum "line" length of 512 characters, including \r\n,
 	// the command and all parameters. On Azzurra the limit seems to be lower...
 	MaximumCommandLength = 460
+
+	SleepBetweenReconnects = time.Minute * 5
 )
 
 type Channel struct {
@@ -128,7 +130,7 @@ func (c *Connection) MainLoop() {
 		}
 
 		c.reinit()
-		time.Sleep(time.Second * 5)
+		time.Sleep(SleepBetweenReconnects)
 	}
 }
 

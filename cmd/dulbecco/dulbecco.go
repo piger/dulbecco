@@ -65,13 +65,15 @@ func main() {
 
 	csig := make(chan os.Signal, 1)
 	signal.Notify(csig, os.Interrupt)
-	select {
-	case <-csig:
-		log.Printf("ctrl-c received\n")
-		for _, conn := range connections {
-			conn.Shutdown()
+	for {
+		select {
+		case <-csig:
+			log.Printf("ctrl-c received\n")
+			for _, conn := range connections {
+				conn.Shutdown()
+			}
+		case <-cExit:
+			return
 		}
-	case <-cExit:
-		return
 	}
 }

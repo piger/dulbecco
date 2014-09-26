@@ -90,7 +90,7 @@ type Connection struct {
 	mdb *markov.MarkovDB
 
 	// callbacks
-	events map[string]map[string]func(*Message)
+	events CallbackMap
 }
 
 func NewConnection(config ServerConfiguration, botConfig *Configuration, mdb *markov.MarkovDB) *Connection {
@@ -106,6 +106,7 @@ func NewConnection(config ServerConfiguration, botConfig *Configuration, mdb *ma
 		outerr:          make(chan bool, numLoops),
 		mdb:             mdb,
 		tryReconnect:    true,
+		events:          make(CallbackMap),
 	}
 
 	// setup internal callbacks

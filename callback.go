@@ -16,11 +16,15 @@ import (
 	"time"
 )
 
-func (c *Connection) AddCallback(name string, callback func(*Message)) string {
+type IRCCallback func(message *Message)
+
+type CallbackMap map[string]map[string]IRCCallback
+
+func (c *Connection) AddCallback(name string, callback IRCCallback) string {
 	name = strings.ToUpper(name)
 
 	if _, ok := c.events[name]; !ok {
-		c.events[name] = make(map[string]func(*Message))
+		c.events[name] = make(map[string]IRCCallback)
 	}
 
 	signature := sha1.Sum([]byte(fmt.Sprintf("%v%d", reflect.ValueOf(callback).Pointer(), rand.Int63())))
@@ -63,8 +67,6 @@ func (c *Connection) RunCallbacks(message *Message) {
 
 // Add internal callbacks.
 func (c *Connection) SetupCallbacks() {
-	c.events = make(map[string]map[string]func(*Message))
-
 	c.AddCallback("INIT", c.h_INIT)
 	c.AddCallback("001", c.h_001)
 	c.AddCallback("433", c.h_433)

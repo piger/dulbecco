@@ -3,10 +3,10 @@ QUOTES_FILES := $(shell find quotes -name '*.go')
 
 all: quotes-plugin dulbecco
 
-quotes-plugin: $(QUOTES_FILES)
-	go build -o quotes-plugin -tags "libstemmer icu" ./quotes
+quotes-plugin: $(QUOTA_FILES) cmd/quotes-plugin/quotes-plugin.go
+	go build -tags "libstemmer icu" cmd/quotes-plugin/quotes-plugin.go
 
-dulbecco: $(GO_FILES)
+dulbecco: $(GO_FILES) cmd/dulbecco/dulbecco.go
 	go build cmd/dulbecco/dulbecco.go
 
 

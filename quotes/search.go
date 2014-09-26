@@ -1,4 +1,4 @@
-package main
+package quotes
 
 import (
 	"errors"
@@ -13,16 +13,16 @@ const (
 	maxResultsPerSearch = 5
 )
 
-func cmdSearch(ctx *cli.Context) {
+func CmdSearch(ctx *cli.Context) {
 	qdb := OpenQuotesDB(ctx)
 
 	page := ctx.Int("page")
 	args := strings.Join(ctx.Args(), " ")
 
-	qdb.SearchQuote(args, page)
+	qdb.searchQuote(args, page)
 }
 
-func (q *QuotesDB) SearchQuote(qstring string, page int) error {
+func (q *QuotesDB) searchQuote(qstring string, page int) error {
 	if page < 1 {
 		return errors.New("Invalid page requested")
 	}

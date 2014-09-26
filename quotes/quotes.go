@@ -1,8 +1,9 @@
-package main
+package quotes
 
 import (
 	"database/sql"
 	"github.com/blevesearch/bleve"
+	"github.com/codegangsta/cli"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os"
@@ -20,8 +21,18 @@ type QuotesDB struct {
 	idx bleve.Index
 }
 
-func NewQuotesDB(dbfile, indexdir string) *QuotesDB {
-	return &QuotesDB{DbFile: dbfile, IndexDir: indexdir}
+func OpenQuotesDB(ctx *cli.Context) *QuotesDB {
+	dbfile := ctx.GlobalString("dbfile")
+	indexdir := ctx.GlobalString("indexdir")
+	if dbfile == "" || indexdir == "" {
+		log.Fatal("You must specify a dbfile and an indexdir")
+	}
+	qdb := &QuotesDB{DbFile: dbfile, IndexDir: indexdir}
+	if err := qdb.Open(); err != nil {
+		log.Fatalf("Error opening databases: %s\n", err)
+	}
+
+	return qdb
 }
 
 type Quote struct {

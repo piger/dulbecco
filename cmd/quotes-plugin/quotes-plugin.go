@@ -2,23 +2,9 @@ package main
 
 import (
 	"github.com/codegangsta/cli"
-	"log"
+	"github.com/piger/dulbecco/quotes"
 	"os"
 )
-
-func OpenQuotesDB(ctx *cli.Context) *QuotesDB {
-	dbfile := ctx.GlobalString("dbfile")
-	indexdir := ctx.GlobalString("indexdir")
-	if dbfile == "" || indexdir == "" {
-		log.Fatal("You must specify a dbfile and an indexdir")
-	}
-	qdb := NewQuotesDB(dbfile, indexdir)
-	if err := qdb.Open(); err != nil {
-		log.Fatalf("Error opening databases: %s\n", err)
-	}
-
-	return qdb
-}
 
 func main() {
 	app := cli.NewApp()
@@ -43,7 +29,7 @@ func main() {
 		{
 			Name:   "search",
 			Usage:  "search a quote",
-			Action: cmdSearch,
+			Action: quotes.CmdSearch,
 			Flags: []cli.Flag{
 				cli.IntFlag{
 					Name:  "page",
@@ -55,17 +41,17 @@ func main() {
 		{
 			Name:   "get",
 			Usage:  "get quote by ID",
-			Action: cmdGetQuote,
+			Action: quotes.CmdGetQuote,
 		},
 		{
 			Name:   "random",
 			Usage:  "get random quote",
-			Action: cmdGetRandomQuote,
+			Action: quotes.CmdGetRandomQuote,
 		},
 		{
 			Name:   "add",
 			Usage:  "add a quote",
-			Action: cmdAddQuote,
+			Action: quotes.CmdAddQuote,
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:   "author",

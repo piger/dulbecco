@@ -1,4 +1,4 @@
-package main
+package quotes
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func cmdAddQuote(ctx *cli.Context) {
+func CmdAddQuote(ctx *cli.Context) {
 	qdb := OpenQuotesDB(ctx)
 
 	author := ctx.String("author")

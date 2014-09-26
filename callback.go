@@ -53,14 +53,14 @@ func (c *Connection) RemoveCallback(name string, id string) bool {
 func (c *Connection) RunCallbacks(message *Message) {
 	if callbacks, ok := c.events[message.Cmd]; ok {
 		for _, callback := range callbacks {
-			go callback(message)
+			callback(message)
 		}
 	}
 
 	// catch-all handlers
 	if callbacks, ok := c.events["*"]; ok {
 		for _, callback := range callbacks {
-			go callback(message)
+			callback(message)
 		}
 	}
 }

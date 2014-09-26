@@ -121,7 +121,6 @@ func (mdb *MarkovDB) Generate(seed string) string {
 
 	tokens, err := tokenize(mdb.Order, seed)
 	if err != nil {
-		log.Println("Generate() error inside tokenize:", err)
 		return ""
 	}
 	for _, token := range tokens {

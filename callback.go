@@ -23,12 +23,9 @@ func (c *Connection) AddCallback(name string, callback func(*Message)) string {
 		c.events[name] = make(map[string]func(*Message))
 	}
 
-	hash := sha1.New()
-	rawId := []byte(fmt.Sprintf("%v%d", reflect.ValueOf(callback).Pointer(), rand.Int63()))
-	hash.Write(rawId)
-	id := fmt.Sprintf("%x", hash.Sum(nil))
+	signature := sha1.Sum([]byte(fmt.Sprintf("%v%d", reflect.ValueOf(callback).Pointer(), rand.Int63())))
+	id := fmt.Sprintf("%x", signature)
 	c.events[name][id] = callback
-	// log.Println("Registered callback:", id)
 	return id
 }
 

@@ -60,7 +60,7 @@ func NewMarkovDB(order int, dbfile string) (*MarkovDB, error) {
 func (mdb *MarkovDB) ReadSentence(sentence string) {
 	tokens, err := tokenize(mdb.Order, sentence)
 	if err != nil {
-		log.Println("ReadSentence error:", err)
+		// log.Printf("ReadSentence error: %s\n", err)
 		return
 	}
 	for _, token := range tokens {
@@ -68,10 +68,12 @@ func (mdb *MarkovDB) ReadSentence(sentence string) {
 		follow := token[len(token)-1]
 		key, err := MakeKey(ngram)
 		if err != nil {
-			log.Println("ReadSentence error:", err)
+			log.Printf("ReadSentence error: %s\n", err)
 			return
 		}
-		mdb.Put(key, follow)
+		if err := mdb.Put(key, follow); err != nil {
+			log.Printf("ReadSentence put error: %s\n", err)
+		}
 	}
 }
 

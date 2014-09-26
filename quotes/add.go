@@ -9,6 +9,8 @@ import (
 )
 
 func cmdAddQuote(ctx *cli.Context) {
+	qdb := OpenQuotesDB(ctx)
+
 	author := ctx.String("author")
 	if author == "" {
 		fmt.Println("You must specify an author")

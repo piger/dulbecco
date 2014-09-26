@@ -7,6 +7,8 @@ import (
 )
 
 func cmdGetQuote(ctx *cli.Context) {
+	qdb := OpenQuotesDB(ctx)
+
 	id := ctx.Args().First()
 	if id == "" {
 		fmt.Println("ma de che?")
@@ -24,6 +26,8 @@ func cmdGetQuote(ctx *cli.Context) {
 }
 
 func cmdGetRandomQuote(ctx *cli.Context) {
+	qdb := OpenQuotesDB(ctx)
+
 	quote, err := qdb.GetRandomQuote()
 	if err != nil {
 		fmt.Printf("error getting quote: %s\n", err)

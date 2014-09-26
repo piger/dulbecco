@@ -2,32 +2,39 @@ package main
 
 import (
 	"github.com/codegangsta/cli"
+	"log"
 	"os"
 )
 
-var qdb *QuotesDB
+func OpenQuotesDB(ctx *cli.Context) *QuotesDB {
+	dbfile := ctx.GlobalString("dbfile")
+	indexdir := ctx.GlobalString("indexdir")
+	if dbfile == "" || indexdir == "" {
+		log.Fatal("You must specify a dbfile and an indexdir")
+	}
+	qdb := NewQuotesDB(dbfile, indexdir)
+	if err := qdb.Open(); err != nil {
+		log.Fatalf("Error opening databases: %s\n", err)
+	}
 
-func OpenQuotesDB(ctx *cli.Context) error {
-	qdb = NewQuotesDB(ctx.GlobalString("dbfile"), ctx.GlobalString("indexdir"))
-	return qdb.Open()
+	return qdb
 }
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "pinolo-quotes"
 	app.Usage = "pinolo quotes plugin"
-	app.Version = "0.1.1"
-	app.Before = OpenQuotesDB
+	app.Version = "0.1.2"
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "dbfile",
-			Value: "db.sqlite",
+			Value: "",
 			Usage: "Path to DB file",
 		},
 		cli.StringFlag{
 			Name:  "indexdir",
-			Value: "idx",
+			Value: "",
 			Usage: "Path to index directory",
 		},
 	}

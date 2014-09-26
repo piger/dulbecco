@@ -14,6 +14,8 @@ const (
 )
 
 func cmdSearch(ctx *cli.Context) {
+	qdb := OpenQuotesDB(ctx)
+
 	page := ctx.Int("page")
 	args := strings.Join(ctx.Args(), " ")
 

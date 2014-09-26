@@ -76,11 +76,7 @@ type Connection struct {
 	sock         net.Conn
 	io           *bufio.ReadWriter
 	out          chan string
-	connected    bool
 	tryReconnect bool
-
-	// lock shutdown calls
-	mutex sync.Mutex
 
 	// SSL
 	useTLS bool
@@ -155,12 +151,8 @@ func (c *Connection) Connect() (err error) {
 		return
 	}
 
-	log.Println("Connected to:", c.config.Address)
-	c.connected = true
-
-	c.io = bufio.NewReadWriter(
-		bufio.NewReader(c.sock),
-		bufio.NewWriter(c.sock))
+	log.Println("Connected to:", c.config.Name)
+	c.io = bufio.NewReadWriter(bufio.NewReader(c.sock), bufio.NewWriter(c.sock))
 
 	// remember to update numLoops if you add or remove loop methods!
 	c.wg.Add(numLoops)

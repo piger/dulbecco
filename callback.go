@@ -323,6 +323,9 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 	} else if message.Nick == NickservName && strings.Index(message.Args[1], "accepted") != -1 {
 		c.JoinChannels()
 		return
+	} else if strings.HasPrefix(message.Args[1], "!") {
+		// this is a command, let it be handled by plugins callbacks
+		return
 	} else if !strings.HasPrefix(message.Args[1], c.nickname) {
 		// it's not a message directed to us, but we can still train markov from it
 		c.mdb.ReadSentence(message.Args[1])

@@ -176,11 +176,13 @@ func (c *Connection) errLoop() {
 
 	for {
 		select {
-		case err := <-c.inerr:
-			log.Printf("Incoming error: %s\n", err)
+		case ircerr := <-c.inerr:
+			log.Printf("Incoming error: %s\n", ircerr)
 
 			// ensure we have closed the socket
-			c.sock.Close()
+			if err := c.sock.Close(); err != nil {
+				log.Printf("error closing socket: %s\n", err)
+			}
 
 			// incoming error from a goroutine
 			for i := 0; i < numLoops; i++ {

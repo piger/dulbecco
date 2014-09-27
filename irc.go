@@ -1,10 +1,3 @@
-// dulbecco is a IRC bot.
-//
-// Plugin support through external commands (bash, python, ...).
-//
-//   most of the code was copied from:
-//   - https://github.com/fluffle/goirc
-//   - https://github.com/thoj/go-ircevent
 package dulbecco
 
 import (

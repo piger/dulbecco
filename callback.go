@@ -335,7 +335,7 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 	}
 
 	// strip our own nickname from the input text
-	renick := regexp.MustCompile(fmt.Sprintf("%s *: *", c.nickname))
+	renick := regexp.MustCompile(fmt.Sprintf("%s *[:,] *", c.nickname))
 	text := renick.ReplaceAllLiteralString(message.Args[1], "")
 
 	// markov!

@@ -4,11 +4,15 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"math/rand"
 )
+
+var defaultReplies []string
 
 type Configuration struct {
 	Servers []ServerConfiguration
 	Plugins []PluginConfiguration
+	Replies []string
 }
 
 type ServerConfiguration struct {
@@ -41,5 +45,16 @@ func ReadConfig(filename string) *Configuration {
 		log.Fatal("ERROR Cannot parse configuration file: ", err)
 	}
 
+	if len(config.Replies) > 0 {
+		defaultReplies = config.Replies
+	}
+
 	return &config
+}
+
+func GetRandomReply() string {
+	if len(defaultReplies) > 0 {
+		return defaultReplies[rand.Intn(len(defaultReplies))]
+	}
+	return "DEMENZA MI COLSE"
 }

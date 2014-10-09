@@ -344,7 +344,7 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 
 	// do not bother answering if the answer is the same as the input phrase
 	if reply == text || len(reply) == 0 {
-		c.Privmsg(message.Args[0], message.Nick+": "+"DEMENZA MI COLSE")
+		c.Privmsg(message.Args[0], message.Nick+": "+GetRandomReply())
 		return
 	}
 

@@ -42,5 +42,8 @@
             "command": "./quotes-plugin --dbfile db.sqlite --indexdir idx search {{ .args }}",
             "trigger": "^!s (?P<args>.*)"
         }
+    ],
+    "replies": [
+        "ma io sono scemo!!!"
     ]
 }

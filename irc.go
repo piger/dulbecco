@@ -230,7 +230,7 @@ func (c *Connection) readLoop() {
 		line = strings.TrimRight(line, "\r\n")
 
 		if message, err := parseMessage(line); err == nil {
-			log.Println("message =", message.Dump())
+			// log.Println("message =", message.Dump())
 			c.RunCallbacks(message)
 		} else {
 			log.Printf("parsing failed (%s) for line: %q\n", err, line)

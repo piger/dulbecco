@@ -86,7 +86,7 @@ func (c *Connection) SetupCallbacks() {
 // Add callbacks for every configured plugin.
 func (c *Connection) SetupPlugins(plugins []PluginConfiguration) {
 	for _, plugin := range plugins {
-		log.Println("Adding callback for plugin:", plugin.Name)
+		// log.Println("Adding callback for plugin:", plugin.Name)
 		c.addPluginCallback(plugin)
 	}
 }

@@ -90,9 +90,9 @@ func (c *Connection) Quit(message ...string) {
 
 // PRIVMSG command
 func (c *Connection) Privmsg(target, message string) {
-	cmd := fmt.Sprintf("PRIVMSG %s :", target)
+	cmd := fmt.Sprintf("PRIVMSG %s :%%s", target)
 	for _, phrase := range splitPhrase(cmd, message) {
-		c.Rawf(cmd + phrase)
+		c.Rawf(cmd, phrase)
 	}
 }
 
@@ -103,9 +103,9 @@ func (c *Connection) Privmsgf(target, format string, a ...interface{}) {
 
 // NOTICE command
 func (c *Connection) Notice(target, message string) {
-	cmd := fmt.Sprintf("NOTICE %s :", target)
+	cmd := fmt.Sprintf("NOTICE %s :%%s", target)
 	for _, phrase := range splitPhrase(cmd, message) {
-		c.Rawf(cmd + phrase)
+		c.Rawf(cmd, phrase)
 	}
 }
 

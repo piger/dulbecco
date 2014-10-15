@@ -3,6 +3,7 @@ package dulbecco
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -11,6 +12,8 @@ var (
 	ErrInvalidServerLine = errors.New("Invalid server line: wrong number of tokens")
 
 	CTCPChar = "\001"
+
+	reHostmask = regexp.MustCompile(`^([^!]+)!([^@]+)@(.*)`)
 )
 
 // Each line from the IRC server is parsed into a Message struct.
@@ -65,14 +68,14 @@ func parseMessage(s string) (*Message, error) {
 			return nil, ErrInvalidServerLine
 		}
 
-		// message.Src can be a simple hostname or a "IRC" mask; try to parse it.
-		nidx, iidx := strings.Index(message.Src, "!"), strings.Index(message.Src, "@")
-		if nidx != -1 && iidx != -1 {
-			message.Nick = message.Src[:nidx]
-			message.Ident = message.Src[nidx+1 : iidx]
-			message.Host = message.Src[iidx+1:]
-		} else {
+		// try to parse the hostmask
+		hostmatch := reHostmask.FindStringSubmatch(message.Src)
+		if len(hostmatch) == 0 {
 			message.Host = message.Src
+		} else {
+			message.Nick = hostmatch[1]
+			message.Ident = hostmatch[2]
+			message.Host = hostmatch[3]
 		}
 	}
 
@@ -92,9 +95,7 @@ func parseMessage(s string) (*Message, error) {
 	// args[] = "PRIVMSG", "#channel", "hello world!"
 
 	message.Cmd = strings.ToUpper(args[0])
-	if len(args) > 1 {
-		message.Args = args[1:]
-	}
+	message.Args = args[1:]
 
 	// special handling for CTCPs
 	// :sand!~sand@localhost PRIVMSG nickname :PING 1405848291 393196

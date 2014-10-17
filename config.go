@@ -3,16 +3,18 @@ package dulbecco
 import (
 	"encoding/json"
 	"errors"
+	"github.com/BurntSushi/toml"
 	"io/ioutil"
 	"math/rand"
+	"path/filepath"
 )
 
 var defaultReplies []string
 
 type Configuration struct {
-	Servers []ServerConfiguration
-	Plugins []PluginConfiguration
-	Replies []string
+	Servers []ServerConfiguration `toml:"server"`
+	Plugins []PluginConfiguration `toml:"plugin"`
+	Replies []string              `toml:"replies"`
 }
 
 type ServerConfiguration struct {
@@ -35,20 +37,43 @@ type PluginConfiguration struct {
 }
 
 func ReadConfig(filename string) (*Configuration, error) {
-	file, err := ioutil.ReadFile(filename)
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	var config Configuration
-	if err := json.Unmarshal(file, &config); err != nil {
+	var config *Configuration
+	if filepath.Ext(filename) == ".json" {
+		config, err = readJsonConfig(data)
+	} else {
+		config, err = readTomlConfig(data)
+	}
+	if err != nil {
 		return nil, err
-	} else if len(config.Servers) < 1 {
+	}
+
+	if len(config.Servers) < 1 {
 		return nil, errors.New("no servers defined")
 	}
 
-	copy(defaultReplies, config.Replies)
+	defaultReplies = append(defaultReplies, config.Replies...)
 
+	return config, nil
+}
+
+func readJsonConfig(data []byte) (*Configuration, error) {
+	var config Configuration
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, err
+	}
+	return &config, nil
+}
+
+func readTomlConfig(data []byte) (*Configuration, error) {
+	var config Configuration
+	if _, err := toml.Decode(string(data), &config); err != nil {
+		return nil, err
+	}
 	return &config, nil
 }
 

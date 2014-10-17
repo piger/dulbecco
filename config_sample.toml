@@ -1,0 +1,30 @@
+# pinolo.toml
+#
+# Please note: global variables (i.e. "replies") must be defined *before* any
+# other configuration block.
+
+replies = [
+    "ma io sono scemo!!!",
+    "che è?"
+]
+
+# Servers configuration
+[[server]]
+name = "localhost"
+address = "127.0.0.1:6667"
+nickname = "pinolo"
+altnicknames = [ "pinolo_", "pinolo__" ]
+ssl = false
+username = "pinolo"
+realname = "Pinot di pinolo"
+channels = [ "#pizza" ]
+
+[[plugin]]
+name = "prcd"
+command = "./plugins/prcd/prcd"
+trigger = "^!prcd$"
+
+[[plugin]]
+name = "quotes-read"
+command = "./quotes-plugin --dbfile db.sqlite --indexdir idx random"
+trigger = "^!q$"

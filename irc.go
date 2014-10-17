@@ -138,10 +138,7 @@ func (c *Connection) Connect() (err error) {
 }
 
 func (c *Connection) errLoop() {
-	defer func() {
-		log.Println("exiting errLoop()")
-		c.wg.Done()
-	}()
+	defer c.wg.Done()
 
 	for {
 		select {
@@ -166,10 +163,7 @@ func (c *Connection) errLoop() {
 }
 
 func (c *Connection) writeLoop() {
-	defer func() {
-		defer log.Println("exiting writeLoop()")
-		defer c.wg.Done()
-	}()
+	defer c.wg.Done()
 
 	for {
 		select {
@@ -187,10 +181,7 @@ func (c *Connection) writeLoop() {
 }
 
 func (c *Connection) readLoop() {
-	defer func() {
-		defer log.Println("exiting readLoop()")
-		defer c.wg.Done()
-	}()
+	defer c.wg.Done()
 
 	for {
 		// a read() on a closed socket should always fail, so we can skip
@@ -214,10 +205,7 @@ func (c *Connection) readLoop() {
 }
 
 func (c *Connection) pingLoop() {
-	defer func() {
-		defer log.Println("exiting pingLoop()")
-		defer c.wg.Done()
-	}()
+	defer c.wg.Done()
 
 	tick := time.NewTicker(pingFrequency)
 	for {

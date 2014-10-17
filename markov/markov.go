@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"sync"
 )
 
 var (
@@ -38,6 +39,7 @@ func MakeKey(ngram []string) ([]byte, error) {
 type MarkovDB struct {
 	Order int
 	Db    *levigo.DB
+	mutex sync.Mutex
 }
 
 func NewMarkovDB(order int, dbfile string) (*MarkovDB, error) {
@@ -111,6 +113,11 @@ func (mdb *MarkovDB) Put(key []byte, value string) error {
 	}
 
 	// write the new value to the db
+	// concurrent access is OK as long as we don't write the same key at the same time,
+	// so better use a lock
+	mdb.mutex.Lock()
+	defer mdb.mutex.Unlock()
+
 	err = mdb.Db.Put(wo, key, newwords)
 	return err
 }

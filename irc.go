@@ -30,34 +30,12 @@ const (
 	SleepBetweenReconnects = time.Minute * 5
 )
 
-type Channel struct {
-	name, topic string
-	names       []string
-}
-
-type User struct {
-	nickname, username, hostname, realname string
-
-	channels map[string]bool
-}
-
-func NewUser(nickname string) *User {
-	user := &User{
-		nickname: nickname,
-		channels: make(map[string]bool),
-	}
-	return user
-}
-
 // A connection to the IRC server, also the main data structure of the IRC bot.
 type Connection struct {
 	config ServerConfiguration
 
 	// current nickname
 	nickname string
-
-	chanmap map[string]*Channel
-	usermap map[string]*User
 
 	// enable anti-flood protection
 	floodProtection bool
@@ -90,8 +68,6 @@ func NewConnection(config ServerConfiguration, botConfig *Configuration, mdb *ma
 	conn := &Connection{
 		config:          config,
 		nickname:        config.Nickname,
-		chanmap:         make(map[string]*Channel),
-		usermap:         make(map[string]*User),
 		floodProtection: true,
 		lastSent:        time.Now(),
 		out:             make(chan string, 32),

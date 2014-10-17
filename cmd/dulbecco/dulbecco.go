@@ -33,9 +33,9 @@ func main() {
 		return
 	}
 
-	config := dulbecco.ReadConfig(*configFile)
-	if len(config.Servers) < 1 {
-		log.Fatal("Error in configuration: no servers defined")
+	config, err := dulbecco.ReadConfig(*configFile)
+	if err != nil {
+		log.Fatal("Error with configuration file: ", err)
 	}
 
 	mdb, err := markov.NewMarkovDB(2, *markovDb)

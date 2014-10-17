@@ -2,8 +2,8 @@ package dulbecco
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
-	"log"
 	"math/rand"
 )
 
@@ -34,22 +34,22 @@ type PluginConfiguration struct {
 	Trigger string
 }
 
-func ReadConfig(filename string) *Configuration {
+func ReadConfig(filename string) (*Configuration, error) {
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Fatal("ERROR Cannot read configuration file: ", err)
+		return nil, err
 	}
 
 	var config Configuration
 	if err := json.Unmarshal(file, &config); err != nil {
-		log.Fatal("ERROR Cannot parse configuration file: ", err)
+		return nil, err
+	} else if len(config.Servers) < 1 {
+		return nil, errors.New("no servers defined")
 	}
 
-	if len(config.Replies) > 0 {
-		defaultReplies = config.Replies
-	}
+	copy(defaultReplies, config.Replies)
 
-	return &config
+	return &config, nil
 }
 
 func GetRandomReply() string {

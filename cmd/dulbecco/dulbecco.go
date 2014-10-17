@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"syscall"
 )
 
 var (
@@ -64,14 +65,15 @@ func main() {
 	}()
 
 	csig := make(chan os.Signal, 1)
-	signal.Notify(csig, os.Interrupt)
+	signal.Notify(csig, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		select {
-		case <-csig:
-			log.Printf("ctrl-c received\n")
+		case sig := <-csig:
+			log.Printf("%v received\n", sig)
 			for _, conn := range connections {
 				conn.Shutdown()
 			}
+			signal.Stop(csig)
 		case <-cExit:
 			return
 		}

@@ -52,6 +52,7 @@ func (m *Message) IsFromChannel() bool {
 
 // Parse a line from the IRC server into a Message struct.
 func parseMessage(s string) (*Message, error) {
+	s = strings.TrimRight(s, "\r\n")
 	message := &Message{Raw: s, Time: time.Now()}
 
 	// line begins with a source:

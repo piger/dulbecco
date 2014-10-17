@@ -7,7 +7,6 @@ import (
 	"github.com/piger/dulbecco/markov"
 	"log"
 	"net"
-	"strings"
 	"sync"
 	"time"
 )
@@ -86,8 +85,7 @@ func NewConnection(config ServerConfiguration, botConfig *Configuration, mdb *ma
 
 func (c *Connection) MainLoop() {
 	for {
-		err := c.Connect()
-		if err != nil {
+		if err := c.Connect(); err != nil {
 			log.Printf("Connection error: %s\n", err)
 		}
 		if !c.tryReconnect {
@@ -95,6 +93,7 @@ func (c *Connection) MainLoop() {
 		}
 
 		c.reinit()
+		log.Printf("Sleeping %v before attempting a reconnection\n", SleepBetweenReconnects)
 		time.Sleep(SleepBetweenReconnects)
 	}
 }
@@ -142,9 +141,7 @@ func (c *Connection) errLoop() {
 
 	for {
 		select {
-		case ircerr := <-c.inerr:
-			log.Printf("Incoming error: %s\n", ircerr)
-
+		case <-c.inerr:
 			// ensure we have closed the socket
 			if err := c.sock.Close(); err != nil {
 				log.Printf("error closing socket: %s\n", err)
@@ -156,7 +153,6 @@ func (c *Connection) errLoop() {
 			}
 			return
 		case <-c.outerr:
-			log.Printf("errLoop: alert received, bye!\n")
 			return
 		}
 	}
@@ -170,7 +166,7 @@ func (c *Connection) writeLoop() {
 		case line := <-c.out:
 			err := c.write(line)
 			if err != nil {
-				log.Println("ERROR writing:", err)
+				log.Printf("socket write error: %s\n", err)
 				c.inerr <- err
 				return
 			}
@@ -188,18 +184,15 @@ func (c *Connection) readLoop() {
 		// the check on outerr.
 		line, err := c.io.ReadString('\n')
 		if err != nil {
-			log.Printf("error reading from socket: %s\n", err)
+			log.Printf("socket read error: %s\n", err)
 			c.inerr <- err
 			return
 		}
 
-		line = strings.TrimRight(line, "\r\n")
-
-		if message, err := parseMessage(line); err == nil {
-			// log.Println("message =", message.Dump())
-			c.RunCallbacks(message)
-		} else {
+		if message, err := parseMessage(line); err != nil {
 			log.Printf("parsing failed (%s) for line: %q\n", err, line)
+		} else {
+			c.RunCallbacks(message)
 		}
 	}
 }

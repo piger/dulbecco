@@ -79,8 +79,7 @@ func NewConnection(config ServerConfiguration, botConfig *Configuration, mdb *ma
 	}
 
 	// setup internal callbacks
-	conn.SetupCallbacks()
-	conn.SetupPlugins(botConfig.Plugins)
+	conn.SetupCallbacks(botConfig.Plugins)
 
 	return conn
 }

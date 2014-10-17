@@ -43,7 +43,7 @@ func (c *Connection) RunCallbacks(message *Message) {
 }
 
 // Add internal callbacks.
-func (c *Connection) SetupCallbacks() {
+func (c *Connection) SetupCallbacks(plugins []PluginConfiguration) {
 	c.AddCallback("INIT", c.h_INIT)
 	c.AddCallback("001", c.h_001)
 	c.AddCallback("433", c.h_433)
@@ -53,10 +53,7 @@ func (c *Connection) SetupCallbacks() {
 	c.AddCallback("PONG", c.h_PONG)
 	c.AddCallback("CTCP", c.h_CTCP)
 	c.AddCallback("KICK", c.h_KICK)
-}
 
-// Add callbacks for every configured plugin.
-func (c *Connection) SetupPlugins(plugins []PluginConfiguration) {
 	for _, plugin := range plugins {
 		c.addPluginCallback(plugin)
 	}

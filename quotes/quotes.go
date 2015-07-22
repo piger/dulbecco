@@ -108,7 +108,7 @@ func (q *QuotesDB) IndexAll() error {
 	defer rows.Close()
 
 	var i int
-	batch := bleve.NewBatch()
+	batch := q.idx.NewBatch()
 	for rows.Next() {
 		quote := &Quote{}
 		if err := rows.Scan(&quote.Id, &quote.Author, &quote.Quote, &quote.Karma); err != nil {
@@ -123,7 +123,7 @@ func (q *QuotesDB) IndexAll() error {
 				return err
 			}
 			i = 0
-			batch = bleve.NewBatch()
+			batch = q.idx.NewBatch()
 		} else {
 			i++
 		}

@@ -13,6 +13,8 @@ import (
 
 var (
 	pingFrequency = 3 * time.Minute
+
+	ErrShutdownRequest = errors.New("shutdown requested")
 )
 
 // the number of *Loop() methods on Connection; it's used for synchronization
@@ -141,7 +143,13 @@ func (c *Connection) errLoop() {
 
 	for {
 		select {
-		case <-c.inerr:
+		case ircErr := <-c.inerr:
+			if ircErr == ErrShutdownRequest {
+				c.tryReconnect = false
+				c.Quit()
+				break
+			}
+
 			// ensure we have closed the socket
 			if err := c.sock.Close(); err != nil {
 				log.Printf("error closing socket: %s\n", err)
@@ -246,6 +254,5 @@ func (c *Connection) rateLimit(chars int) time.Duration {
 }
 
 func (c *Connection) Shutdown() {
-	c.tryReconnect = false
-	c.inerr <- errors.New("shutdown requested")
+	c.inerr <- ErrShutdownRequest
 }

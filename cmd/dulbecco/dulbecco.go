@@ -43,6 +43,15 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// start Hipchat handler
+	if config.Hipchat.Address != "" {
+		go func() {
+			if err := dulbecco.HipchatHandler(config.Hipchat.Address, mdb); err != nil {
+				log.Printf("Hipchat handler error: %s\n", err)
+			}
+		}()
+	}
+
 	var connections []*dulbecco.Connection
 	var wg sync.WaitGroup
 

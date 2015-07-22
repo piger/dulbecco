@@ -15,6 +15,7 @@ type Configuration struct {
 	Servers []ServerConfiguration `toml:"server"`
 	Plugins []PluginConfiguration `toml:"plugin"`
 	Replies []string              `toml:"replies"`
+	Hipchat HipchatConfiguration  `toml:"hipchat"`
 }
 
 type ServerConfiguration struct {
@@ -34,6 +35,10 @@ type PluginConfiguration struct {
 	Name    string
 	Command string
 	Trigger string
+}
+
+type HipchatConfiguration struct {
+	Address string
 }
 
 func ReadConfig(filename string) (*Configuration, error) {

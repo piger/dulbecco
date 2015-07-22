@@ -3,10 +3,13 @@ package dulbecco
 import (
 	"bufio"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"github.com/piger/dulbecco/markov"
+	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 )
@@ -107,11 +110,39 @@ func (c *Connection) reinit() {
 	c.outerr = make(chan bool, numLoops)
 }
 
+func readTLSCertificate(filename string) ([]byte, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.ReadAll(f)
+}
+
 // Connect to the server, launch all internal goroutines.
 func (c *Connection) Connect() (err error) {
 	if c.config.Ssl {
-		// XXX should use a valid tls client configuration insted of nil (default)
-		c.sock, err = tls.Dial("tcp", c.config.Address, nil)
+		tlsConfig := &tls.Config{
+			ServerName: c.config.GetHostname(),
+		}
+
+		if c.config.SslInsecure {
+			log.Printf("Using insecure TLS for %s\n", c.config.Name)
+			tlsConfig.InsecureSkipVerify = true
+		}
+
+		if c.config.SslCertificate != "" {
+			roots := x509.NewCertPool()
+			tlsCert, err := readTLSCertificate(c.config.SslCertificate)
+			if err != nil {
+				log.Fatalf("Cannot read TLS certificate %s: %s\n", c.config.SslCertificate, err)
+			}
+			if ok := roots.AppendCertsFromPEM(tlsCert); !ok {
+				log.Fatalf("Cannot use TLS certificate %s: %s\n", c.config.SslCertificate, err)
+			}
+			tlsConfig.RootCAs = roots
+		}
+
+		c.sock, err = tls.Dial("tcp", c.config.Address, tlsConfig)
 	} else {
 		c.sock, err = net.Dial("tcp", c.config.Address)
 	}

@@ -7,27 +7,37 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"path/filepath"
+	"strings"
 )
 
 var defaultReplies []string
 
 type Configuration struct {
-	Servers []ServerConfiguration `toml:"server"`
-	Plugins []PluginConfiguration `toml:"plugin"`
-	Replies []string              `toml:"replies"`
+	Servers []ServerConfiguration
+	Plugins []PluginConfiguration
+	Replies []string
 }
 
 type ServerConfiguration struct {
-	Name         string
-	Address      string
-	Ssl          bool
-	Channels     []string
-	Nickname     string
-	Altnicknames []string
-	Username     string
-	Realname     string
-	Password     string
-	Nickserv     string
+	Name           string
+	Address        string
+	Ssl            bool
+	SslInsecure    bool   `json:"ssl_insecure" toml:"ssl_insecure"`
+	SslCertificate string `json:"ssl_certificate" toml:"ssl_certificate"`
+	Channels       []string
+	Nickname       string
+	Altnicknames   []string
+	Username       string
+	Realname       string
+	Password       string
+	Nickserv       string
+}
+
+func (sc *ServerConfiguration) GetHostname() string {
+	if colon := strings.Index(sc.Address, ":"); colon > 0 {
+		return sc.Address[0:colon]
+	}
+	return sc.Address
 }
 
 type PluginConfiguration struct {

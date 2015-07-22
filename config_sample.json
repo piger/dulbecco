@@ -4,11 +4,14 @@
             "name": "localhost",
             "address": "127.0.0.1:6667",
             "ssl": false,
+	    "ssl_insecure": false,
+	    "ssl_certificate": "/path/to/server.pem",
             "nickname": "pinolo",
             "altnicknames": ["pinolo_", "pinolo__", "pinolo^"],
             "username": "pinolo",
             "realname": "Pinot di pinolo",
-            "channels": ["#pizza"]
+            "channels": ["#pizza"],
+	    "nickserv": "secret",
         }
     ],
     "plugins": [

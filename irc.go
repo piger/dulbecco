@@ -51,9 +51,6 @@ type Connection struct {
 	out          chan string
 	tryReconnect bool
 
-	// SSL
-	useTLS bool
-
 	// Internal channels
 	inerr  chan error
 	outerr chan bool

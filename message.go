@@ -27,6 +27,13 @@ type Message struct {
 	Time     time.Time
 }
 
+func (m *Message) Arg(i int) (string, error) {
+	if i >= len(m.Args) {
+		return "", fmt.Errorf("Argument %d not found", i)
+	}
+	return m.Args[i], nil
+}
+
 // Returns a channel name when the message was sent to a public channel or
 // a nickname when the message was sent privately.
 func (m *Message) ReplyTarget() string {

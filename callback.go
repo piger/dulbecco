@@ -75,7 +75,8 @@ func (c *Connection) addPluginCallback(plugin PluginConfiguration) {
 
 	// this is the actual plugin callback
 	c.AddCallback("PRIVMSG", func(message *Message) {
-		match := re.FindStringSubmatch(message.Args[1])
+		arg1, _ := message.Arg(1)
+		match := re.FindStringSubmatch(arg1)
 		if match == nil {
 			return
 		}
@@ -151,8 +152,13 @@ func (c *Connection) h_001(message *Message) {
 
 // rejoin when kicked after 5 seconds
 func (c *Connection) h_KICK(message *Message) {
-	var channame = message.Args[0]
-	var nick = strings.Trim(message.Args[1], " ")
+	channame, err1 := message.Arg(0)
+	nick, err2 := message.Arg(1)
+	if err1 != nil || err2 != nil {
+		fmt.Printf("Invalid KICK command: %s\n", message.Raw)
+		return
+	}
+	nick = strings.Trim(nick, " ")
 
 	if nick == c.nickname {
 		cTimer := time.After(5 * time.Second)
@@ -170,12 +176,23 @@ func (c *Connection) h_433(message *Message) {
 
 // Server PING.
 func (c *Connection) h_PING(message *Message) {
-	c.Raw("PONG " + message.Args[0])
+	ping, err := message.Arg(0)
+	if err != nil {
+		log.Printf("Invalid PING message: %s\n", message.Raw)
+		return
+	}
+	c.Raw("PONG " + ping)
 }
 
 func (c *Connection) h_PONG(message *Message) {
-	theirTime, err := strconv.ParseInt(message.Args[0], 10, 64)
+	ping, err := message.Arg(0)
 	if err != nil {
+		log.Printf("Invalid PONG message: %s\n", message.Raw)
+		return
+	}
+	theirTime, err := strconv.ParseInt(ping, 10, 64)
+	if err != nil {
+		log.Printf("Invalind PING value: %s\n", message.Raw)
 		return
 	}
 	delta := time.Duration(time.Now().UnixNano() - theirTime)
@@ -184,27 +201,32 @@ func (c *Connection) h_PONG(message *Message) {
 
 // generic PRIVMSG callback handling QUIT command and dummy reply.
 func (c *Connection) h_PRIVMSG(message *Message) {
-	if strings.HasPrefix(message.Args[1], "!quit") &&
+	// arg0 and arg1 will always be present in a PRIVMSG
+	arg0, _ := message.Arg(0)
+	arg1, _ := message.Arg(1)
+	// and Arg() returns an empty string on error so we are safe anyway
+
+	if strings.HasPrefix(arg1, "!quit") &&
 		message.Nick == "sand" {
 		// XXX we should find a smarter way to disable auto-reconnect
 		c.tryReconnect = false
 		c.Quit()
 		return
-	} else if message.Nick == NickservName && strings.Index(message.Args[1], "accepted") != -1 {
+	} else if message.Nick == NickservName && strings.Index(arg1, "accepted") != -1 {
 		c.JoinChannels()
 		return
-	} else if strings.HasPrefix(message.Args[1], "!") {
+	} else if strings.HasPrefix(arg1, "!") {
 		// this is a command, let it be handled by plugins callbacks
 		return
-	} else if !strings.HasPrefix(message.Args[1], c.nickname) {
+	} else if !strings.HasPrefix(arg1, c.nickname) {
 		// it's not a message directed to us, but we can still train markov from it
-		c.mdb.ReadSentence(message.Args[1])
+		c.mdb.ReadSentence(arg1)
 		return
 	}
 
 	// strip our own nickname from the input text
 	renick := regexp.MustCompile(fmt.Sprintf("%s *[:,] *", c.nickname))
-	text := renick.ReplaceAllLiteralString(message.Args[1], "")
+	text := renick.ReplaceAllLiteralString(arg1, "")
 
 	// markov!
 	c.mdb.ReadSentence(text)
@@ -212,20 +234,21 @@ func (c *Connection) h_PRIVMSG(message *Message) {
 
 	// do not bother answering if the answer is the same as the input phrase
 	if reply == text || len(reply) == 0 {
-		c.Privmsg(message.Args[0], message.Nick+": "+GetRandomReply())
+		c.Privmsg(arg0, message.Nick+": "+GetRandomReply())
 		return
 	}
 
 	if message.IsFromChannel() {
-		c.Privmsg(message.Args[0], message.Nick+": "+reply)
+		c.Privmsg(arg0, message.Nick+": "+reply)
 	} else {
 		c.Privmsg(message.Nick, reply)
 	}
 }
 
 func (c *Connection) h_NOTICE(message *Message) {
+	arg1, _ := message.Arg(1)
 	nick := strings.ToLower(message.Nick)
-	if nick == NickservName && strings.Index(message.Args[1], "accepted") != -1 {
+	if nick == NickservName && strings.Index(arg1, "accepted") != -1 {
 		c.JoinChannels()
 		return
 	}
@@ -233,7 +256,14 @@ func (c *Connection) h_NOTICE(message *Message) {
 
 // general CTCP handler
 func (c *Connection) h_CTCP(message *Message) {
-	if message.Args[0] == "PING" {
-		c.CtcpReply(message.Nick, fmt.Sprintf("PING %s", message.Args[2]))
+	arg0, err1 := message.Arg(0)
+	arg2, err2 := message.Arg(2)
+	if err1 != nil || err2 != nil {
+		log.Printf("Invalid CTCP message: %s\n", message.Raw)
+		return
+	}
+
+	if arg0 == "PING" {
+		c.CtcpReply(message.Nick, fmt.Sprintf("PING %s", arg2))
 	}
 }

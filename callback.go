@@ -185,6 +185,10 @@ func (c *Connection) h_PING(message *Message) {
 }
 
 func (c *Connection) h_PONG(message *Message) {
+	if !c.config.Debug {
+		return
+	}
+
 	ping, err := message.Arg(1)
 	if err != nil {
 		log.Printf("Invalid PONG message: %s (%s)", err, message)

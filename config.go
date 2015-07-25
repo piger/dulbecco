@@ -32,6 +32,7 @@ type ServerConfiguration struct {
 	Realname       string
 	Password       string
 	Nickserv       string
+	Debug          bool
 }
 
 func (sc *ServerConfiguration) GetHostname() string {

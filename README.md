@@ -7,7 +7,7 @@
 Go get:
 
 	go get github.com/piger/dulbecco/cmd/dulbecco
-	go get -tags "libstemmer" github.com/piger/dulbecco/cmd/quotes-plugin
+	go get github.com/piger/dulbecco/cmd/quotes-plugin
 
 ## Credits
 

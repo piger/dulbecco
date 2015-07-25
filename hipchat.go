@@ -74,7 +74,7 @@ func WithRequest(ac *AppContext, h vHandler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hr, err := decodeHipchatRequest(r.Body)
 		if err != nil {
-			log.Printf("Cannot decode JSON request: %s\n", err)
+			log.Print("Cannot decode JSON request: ", err)
 			http.Error(w, "ERROR", http.StatusInternalServerError)
 			return
 		}
@@ -128,7 +128,7 @@ func sendJSONResponse(w http.ResponseWriter, resp *CommandResponse) {
 	w.Header().Set("Content-Type", "application/json")
 	jresp, err := json.Marshal(resp)
 	if err != nil {
-		log.Printf("Cannot encode JSON response: %s\n", err)
+		log.Print("Cannot encode JSON response: ", err)
 		http.Error(w, "ERROR", http.StatusInternalServerError)
 		return
 	}

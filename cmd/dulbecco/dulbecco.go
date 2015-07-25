@@ -47,7 +47,7 @@ func main() {
 	if config.Hipchat.Address != "" {
 		go func() {
 			if err := dulbecco.HipchatHandler(config.Hipchat.Address, mdb); err != nil {
-				log.Printf("Hipchat handler error: %s\n", err)
+				log.Print("Hipchat handler error: ", err)
 			}
 		}()
 	}
@@ -56,7 +56,7 @@ func main() {
 	var wg sync.WaitGroup
 
 	for _, server := range config.Servers {
-		log.Printf("Connecting to: %s\n", server.Address)
+		log.Print("Connecting to: ", server.Address)
 
 		wg.Add(1)
 		conn := dulbecco.NewConnection(server, config, mdb)
@@ -78,7 +78,7 @@ func main() {
 	for {
 		select {
 		case sig := <-csig:
-			log.Printf("%v received\n", sig)
+			log.Printf("%v received", sig)
 			for _, conn := range connections {
 				conn.Shutdown()
 			}

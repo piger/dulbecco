@@ -29,7 +29,7 @@ func OpenQuotesDB(ctx *cli.Context) *QuotesDB {
 	}
 	qdb := &QuotesDB{DbFile: dbfile, IndexDir: indexdir}
 	if err := qdb.Open(); err != nil {
-		log.Fatalf("Error opening databases: %s\n", err)
+		log.Fatal("Error opening databases: ", err)
 	}
 
 	return qdb
@@ -112,7 +112,7 @@ func (q *QuotesDB) IndexAll() error {
 	for rows.Next() {
 		quote := &Quote{}
 		if err := rows.Scan(&quote.Id, &quote.Author, &quote.Quote, &quote.Karma); err != nil {
-			log.Printf("Error reading quote %+v: %s\n", quote, err)
+			log.Printf("Error reading quote %+v: %s", quote, err)
 			// return err
 		}
 		id := strconv.Itoa(quote.Id)

@@ -70,7 +70,7 @@ func (c *Connection) addPluginCallback(plugin PluginConfiguration) {
 
 	cmdtpl, err := template.New("cmd").Parse(plugin.Command)
 	if err != nil {
-		log.Fatalf("Cannot parse template for plugin %s: %s\n", plugin.Name, err)
+		log.Fatalf("Cannot parse template for plugin %s: %s", plugin.Name, err)
 	}
 
 	// this is the actual plugin callback
@@ -90,7 +90,7 @@ func (c *Connection) addPluginCallback(plugin PluginConfiguration) {
 
 		var cmdbuf bytes.Buffer
 		if err := cmdtpl.Execute(&cmdbuf, captures); err != nil {
-			log.Printf("Cannot execute template: %s\n", err)
+			log.Print("Cannot execute template: ", err)
 			return
 		}
 		cmdline := cmdbuf.String()
@@ -117,7 +117,7 @@ func (c *Connection) addPluginCallback(plugin PluginConfiguration) {
 				c.Privmsg(target, line)
 			}
 		} else {
-			log.Printf("Failed exec for plugin '%s': %s\n", plugin.Name, err)
+			log.Printf("Failed exec for plugin '%s': %s", plugin.Name, err)
 		}
 	})
 }
@@ -178,7 +178,7 @@ func (c *Connection) h_433(message *Message) {
 func (c *Connection) h_PING(message *Message) {
 	ping, err := message.Arg(0)
 	if err != nil {
-		log.Printf("Invalid PING message: %s\n", message.Raw)
+		log.Print("Invalid PING message: ", message.Raw)
 		return
 	}
 	c.Raw("PONG " + ping)
@@ -187,16 +187,16 @@ func (c *Connection) h_PING(message *Message) {
 func (c *Connection) h_PONG(message *Message) {
 	ping, err := message.Arg(0)
 	if err != nil {
-		log.Printf("Invalid PONG message: %s\n", message.Raw)
+		log.Print("Invalid PONG message: ", message.Raw)
 		return
 	}
 	theirTime, err := strconv.ParseInt(ping, 10, 64)
 	if err != nil {
-		log.Printf("Invalind PING value: %s\n", message.Raw)
+		log.Print("Invalind PING value: ", message.Raw)
 		return
 	}
 	delta := time.Duration(time.Now().UnixNano() - theirTime)
-	log.Printf("Lag: %v\n", delta)
+	log.Printf("Lag: %v", delta)
 }
 
 // generic PRIVMSG callback handling QUIT command and dummy reply.
@@ -259,7 +259,7 @@ func (c *Connection) h_CTCP(message *Message) {
 	arg0, err1 := message.Arg(0)
 	arg2, err2 := message.Arg(2)
 	if err1 != nil || err2 != nil {
-		log.Printf("Invalid CTCP message: %s\n", message.Raw)
+		log.Print("Invalid CTCP message: ", message.Raw)
 		return
 	}
 

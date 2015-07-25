@@ -70,11 +70,11 @@ func (mdb *MarkovDB) ReadSentence(sentence string) {
 		follow := token[len(token)-1]
 		key, err := MakeKey(ngram)
 		if err != nil {
-			log.Printf("ReadSentence error: %s\n", err)
+			log.Print("ReadSentence error: ", err)
 			return
 		}
 		if err := mdb.Put(key, follow); err != nil {
-			log.Printf("ReadSentence put error: %s\n", err)
+			log.Print("ReadSentence put error: ", err)
 		}
 	}
 }
@@ -159,7 +159,7 @@ func (mdb *MarkovDB) Generate(seed string) string {
 func (mdb *MarkovDB) Goo(ngramKey []string) string {
 	key, err := MakeKey(ngramKey)
 	if err != nil {
-		log.Println("Goo error (MakeKey):", err)
+		log.Print("Goo error (MakeKey): ", err)
 		return ""
 	}
 	var result []string = make([]string, len(ngramKey))

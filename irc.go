@@ -86,14 +86,14 @@ func NewConnection(config ServerConfiguration, botConfig *Configuration, mdb *ma
 func (c *Connection) MainLoop() {
 	for {
 		if err := c.Connect(); err != nil {
-			log.Printf("Connection error: %s\n", err)
+			log.Print("Connection error: ", err)
 		}
 		if !c.tryReconnect {
 			return
 		}
 
 		c.reinit()
-		log.Printf("Sleeping %v before attempting a reconnection\n", SleepBetweenReconnects)
+		log.Printf("Sleeping %v before attempting a reconnection", SleepBetweenReconnects)
 		time.Sleep(SleepBetweenReconnects)
 	}
 }
@@ -123,7 +123,7 @@ func (c *Connection) Connect() (err error) {
 		}
 
 		if c.config.SslInsecure {
-			log.Printf("Using insecure TLS for %s\n", c.config.Name)
+			log.Print("Using insecure TLS for ", c.config.Name)
 			tlsConfig.InsecureSkipVerify = true
 		}
 
@@ -131,10 +131,10 @@ func (c *Connection) Connect() (err error) {
 			roots := x509.NewCertPool()
 			tlsCert, err := readTLSCertificate(c.config.SslCertificate)
 			if err != nil {
-				log.Fatalf("Cannot read TLS certificate %s: %s\n", c.config.SslCertificate, err)
+				log.Fatalf("Cannot read TLS certificate %s: %s", c.config.SslCertificate, err)
 			}
 			if ok := roots.AppendCertsFromPEM(tlsCert); !ok {
-				log.Fatalf("Cannot use TLS certificate %s: %s\n", c.config.SslCertificate, err)
+				log.Fatalf("Cannot use TLS certificate %s: %s", c.config.SslCertificate, err)
 			}
 			tlsConfig.RootCAs = roots
 		}
@@ -147,7 +147,7 @@ func (c *Connection) Connect() (err error) {
 		return
 	}
 
-	log.Println("Connected to:", c.config.Name)
+	log.Print("Connected to: ", c.config.Name)
 	c.io = bufio.NewReadWriter(bufio.NewReader(c.sock), bufio.NewWriter(c.sock))
 
 	// remember to update numLoops if you add or remove loop methods!
@@ -172,7 +172,7 @@ func (c *Connection) errLoop() {
 		case <-c.inerr:
 			// ensure we have closed the socket
 			if err := c.sock.Close(); err != nil {
-				log.Printf("error closing socket: %s\n", err)
+				log.Print("error closing socket: ", err)
 			}
 
 			// incoming error from a goroutine
@@ -194,7 +194,7 @@ func (c *Connection) writeLoop() {
 		case line := <-c.out:
 			err := c.write(line)
 			if err != nil {
-				log.Printf("socket write error: %s\n", err)
+				log.Print("socket write error: ", err)
 				c.inerr <- err
 				return
 			}
@@ -212,13 +212,13 @@ func (c *Connection) readLoop() {
 		// the check on outerr.
 		line, err := c.io.ReadString('\n')
 		if err != nil {
-			log.Printf("socket read error: %s\n", err)
+			log.Print("socket read error: ", err)
 			c.inerr <- err
 			return
 		}
 
 		if message, err := parseMessage(line); err != nil {
-			log.Printf("parsing failed (%s) for line: %q\n", err, line)
+			log.Printf("parsing failed (%s) for line: %q", err, line)
 		} else {
 			c.RunCallbacks(message)
 		}
@@ -243,7 +243,7 @@ func (c *Connection) pingLoop() {
 func (c *Connection) write(line string) error {
 	if !c.floodProtection {
 		if t := c.rateLimit(len(line)); t != 0 {
-			log.Printf("anti-flood: sleeping for %.2f seconds\n", t.Seconds())
+			log.Printf("anti-flood: sleeping for %.2f seconds", t.Seconds())
 			<-time.After(t)
 		}
 	}

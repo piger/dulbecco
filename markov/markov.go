@@ -1,20 +1,30 @@
 package markov
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/jmhodges/levigo"
+	"github.com/boltdb/bolt"
 	"log"
 	"math/rand"
-	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
 	MaxPhraseLength = 50
 )
+
+const bucketName = "markov"
+
+func BucketName() []byte {
+	return []byte(bucketName)
+}
+
+// Create a key suitable for MarkovDB
+func MakeKey(ngram []string) ([]byte, error) {
+	return json.Marshal(ngram)
+}
 
 func tokenize(order int, sentence string) ([][]string, error) {
 	var result [][]string
@@ -32,21 +42,15 @@ func tokenize(order int, sentence string) ([][]string, error) {
 	return result, nil
 }
 
-func MakeKey(ngram []string) ([]byte, error) {
-	return json.Marshal(ngram)
-}
-
 type MarkovDB struct {
 	Order int
-	Db    *levigo.DB
+	Db    *bolt.DB
 	mutex sync.Mutex
 }
 
 func NewMarkovDB(order int, dbfile string) (*MarkovDB, error) {
-	opts := levigo.NewOptions()
-	opts.SetCache(levigo.NewLRUCache(3 << 29))
-	opts.SetCreateIfMissing(true)
-	db, err := levigo.Open(dbfile, opts)
+	opts := bolt.Options{Timeout: 1 * time.Second}
+	db, err := bolt.Open(dbfile, 0600, &opts)
 	if err != nil {
 		return nil, err
 	}
@@ -55,77 +59,86 @@ func NewMarkovDB(order int, dbfile string) (*MarkovDB, error) {
 		Order: order,
 		Db:    db,
 	}
+	if err := mdb.createBucket(bucketName); err != nil {
+		return nil, err
+	}
 
 	return mdb, nil
 }
 
+func (mdb *MarkovDB) createBucket(name string) error {
+	err := mdb.Db.Update(func(tx *bolt.Tx) error {
+		_, berr := tx.CreateBucketIfNotExists([]byte(name))
+		return berr
+	})
+	return err
+}
+
+// Learn from the given sentence
 func (mdb *MarkovDB) ReadSentence(sentence string) {
 	tokens, err := tokenize(mdb.Order, sentence)
 	if err != nil {
-		// log.Printf("ReadSentence error: %s\n", err)
 		return
 	}
-	for _, token := range tokens {
-		ngram := token[0 : len(token)-1]
-		follow := token[len(token)-1]
-		key, err := MakeKey(ngram)
-		if err != nil {
-			log.Printf("ReadSentence error: %s\n", err)
-			return
+
+	mdb.mutex.Lock()
+	defer mdb.mutex.Unlock()
+
+	err = mdb.Db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(BucketName())
+
+		for _, token := range tokens {
+			ngram := token[0 : len(token)-1]
+			follow := token[len(token)-1]
+			key, err := MakeKey(ngram)
+			if err != nil {
+				return err
+			}
+			if err := mdb.updateValue(key, follow, bkt); err != nil {
+				return err
+			}
 		}
-		if err := mdb.Put(key, follow); err != nil {
-			log.Printf("ReadSentence put error: %s\n", err)
-		}
+		return nil
+	})
+	if err != nil {
+		log.Printf("ReadSentence error: %s\n", err)
 	}
 }
 
-func (mdb *MarkovDB) Put(key []byte, value string) error {
-	ro := levigo.NewReadOptions()
-	wo := levigo.NewWriteOptions()
-	defer ro.Close()
-	defer wo.Close()
+func (mdb *MarkovDB) updateValue(key []byte, value string, bkt *bolt.Bucket) error {
+	var jsonwords []byte
 
 	// get existing value for key
-	jsonwords, err := mdb.Db.Get(ro, key)
-	if err != nil {
-		return err
-	}
+	jsonwords = bkt.Get(key)
 
 	// deserialize existing value, if any
 	var words []string
-	if jsonwords != nil && string(jsonwords) != "" {
-		err = json.Unmarshal(jsonwords, &words)
+	if jsonwords != nil && len(jsonwords) > 0 {
+		err := json.Unmarshal(jsonwords, &words)
 		if err != nil {
 			return err
 		}
 	}
 
-	// append the new word to the value and serialize the result
+	// short circuit if the value is already there
 	for _, word := range words {
 		if word == value {
 			return nil
 		}
 	}
+
+	// append the new word to the value and serialize the result
 	words = append(words, value)
 	newwords, err := json.Marshal(words)
 	if err != nil {
 		return err
 	}
 
-	// write the new value to the db
-	// concurrent access is OK as long as we don't write the same key at the same time,
-	// so better use a lock
-	mdb.mutex.Lock()
-	defer mdb.mutex.Unlock()
-
-	err = mdb.Db.Put(wo, key, newwords)
-	return err
+	return bkt.Put(key, newwords)
 }
 
+// Generate a phrase
 func (mdb *MarkovDB) Generate(seed string) string {
-	ro := levigo.NewReadOptions()
-	defer ro.Close()
-
 	var phrases []string
 
 	tokens, err := tokenize(mdb.Order, seed)
@@ -136,7 +149,12 @@ func (mdb *MarkovDB) Generate(seed string) string {
 		ngram := token[0 : len(token)-1]
 		// fmt.Printf("ngram = %q\n", ngram)
 
-		phrase := mdb.Goo(ngram)
+		phrase, err := mdb.generatePhrase(ngram)
+		if err != nil {
+			log.Printf("Generate error: %s\n", err)
+			return ""
+		}
+
 		if phrase == seed {
 			continue
 		}
@@ -156,153 +174,66 @@ func (mdb *MarkovDB) Generate(seed string) string {
 	return result
 }
 
-func (mdb *MarkovDB) Goo(ngramKey []string) string {
+func (mdb *MarkovDB) generatePhrase(ngramKey []string) (string, error) {
 	key, err := MakeKey(ngramKey)
 	if err != nil {
-		log.Println("Goo error (MakeKey):", err)
-		return ""
+		return "", err
 	}
+
 	var result []string = make([]string, len(ngramKey))
 	copy(result, ngramKey)
 
 	// fmt.Printf("result (1): %q (%q)\n", result, ngramKey)
 
-	for i := 0; i < MaxPhraseLength; i++ {
-		followWord, err := mdb.GetRandom(key)
-		if err != nil || followWord == "\n" {
-			// fmt.Printf("no follow for %s\n", key)
-			break
-		}
-		if followWord == "\n" {
-			break
-		}
-		result = append(result, followWord)
-		ngramKey = append(ngramKey[1:], followWord)
-		key, err = MakeKey(ngramKey)
-		if err != nil {
-			break
-		}
-	}
-	return strings.Join(result, " ")
-}
+	err = mdb.Db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(BucketName())
 
-func (mdb *MarkovDB) GetRandom(key []byte) (string, error) {
-	ro := levigo.NewReadOptions()
-	defer ro.Close()
+		for i := 0; i < MaxPhraseLength; i++ {
+			followWord, err := mdb.getRandom(key, bkt)
+			if err != nil || followWord == "\n" {
+				// fmt.Printf("no follow for %s\n", key)
+				break
+			}
+			if followWord == "\n" {
+				break
+			}
+			result = append(result, followWord)
+			ngramKey = append(ngramKey[1:], followWord)
+			key, err = MakeKey(ngramKey)
+			if err != nil {
+				return err
+			}
+		}
 
-	jsondata, err := mdb.Db.Get(ro, key)
-	if err != nil {
-		return "", nil
-	}
-
-	var follows []string
-	if jsondata == nil || string(jsondata) == "" {
-		return "", fmt.Errorf("no value for this key: %s\n", key)
-	}
-	err = json.Unmarshal(jsondata, &follows)
+		return nil
+	})
 	if err != nil {
 		return "", err
 	}
 
-	word := follows[rand.Intn(len(follows))]
-
-	// fmt.Printf("random for %q: %q\n", key, word)
-
-	return word, nil
+	return strings.Join(result, " "), nil
 }
 
-func (mdb *MarkovDB) Close() {
-	mdb.Db.Close()
-}
+// NOTE: the following function runs inside a bolt.Tx!
 
-func TestMarkov() {
-	mdb, err := NewMarkovDB(2, "petodb")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer mdb.Close()
+func (mdb *MarkovDB) getRandom(key []byte, bkt *bolt.Bucket) (string, error) {
+	var jsonwords []byte
 
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Print("> ")
-		text, _ := reader.ReadString('\n')
-		if strings.HasPrefix(text, "quit") {
-			break
-		}
-		// mdb.ReadSentence(text)
-		mdb.Generate(text)
-	}
-}
+	// get existing value for key
+	jsonwords = bkt.Get(key)
 
-func ReadStdin(dbpath string, order int) {
-	mdb, err := NewMarkovDB(order, dbpath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer mdb.Close()
-
-	i := 1
-	var buf string
-
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		text, err := reader.ReadString('\n')
+	// deserialize existing value, if any
+	var words []string
+	if jsonwords != nil && len(jsonwords) > 0 {
+		err := json.Unmarshal(jsonwords, &words)
 		if err != nil {
-			log.Print(err)
-			break
+			return "", err
 		}
-
-		text = strings.TrimRight(text, "\n")
-		if text == "" {
-			text = "\n"
-		}
-
-		if i%2 == 0 {
-			fmt.Printf("Put %s -> %q\n", buf, text)
-			mdb.Put([]byte(buf), text)
-		} else {
-			buf = text
-		}
-
-		i++
 	}
+
+	return words[rand.Intn(len(words))], nil
 }
 
-// To read from a IRC log file with a format like:
-//
-//    Dec 19 15:24:41 <user>    hello world!
-//
-// You can cleanup the log running:
-//
-// awk '$4 ~ /^</ { print }' < irc.log | cut -d '>' -f 2- | sed 's/^_TAB_//'
-//
-// Where _TAB_ is 'C-v TAB' from a bash shell.
-
-func ReadFile(dbpath, filename string, order int) error {
-	mdb, err := NewMarkovDB(order, dbpath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer mdb.Close()
-
-	var reader *bufio.Reader
-
-	if filename == "-" {
-		reader = bufio.NewReader(os.Stdin)
-	} else {
-		file, err := os.Open(filename)
-		if err != nil {
-			return err
-		}
-		reader = bufio.NewReader(file)
-	}
-
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			return err
-		}
-		line = strings.TrimRight(line, "\r\n")
-		mdb.ReadSentence(line)
-	}
+func (mdb *MarkovDB) Close() error {
+	return mdb.Db.Close()
 }

@@ -185,7 +185,7 @@ func (c *Connection) h_PING(message *Message) {
 }
 
 func (c *Connection) h_PONG(message *Message) {
-	ping, err := message.Arg(0)
+	ping, err := message.Arg(1)
 	if err != nil {
 		log.Printf("Invalid PONG message: %s (%s)", err, message)
 		return
@@ -196,7 +196,7 @@ func (c *Connection) h_PONG(message *Message) {
 		return
 	}
 	delta := time.Duration(time.Now().UnixNano() - theirTime)
-	log.Printf("Lag: %v", delta)
+	log.Printf("Lag for %s: %v", c.config.Name, delta)
 }
 
 // generic PRIVMSG callback handling QUIT command and dummy reply.

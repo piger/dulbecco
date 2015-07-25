@@ -13,7 +13,7 @@ import (
 var defaultReplies []string
 
 type Configuration struct {
-	Servers []ServerConfiguration
+	Servers []ServerConfiguration `toml:"server"`
 	Plugins []PluginConfiguration
 	Replies []string
 	Hipchat HipchatConfiguration

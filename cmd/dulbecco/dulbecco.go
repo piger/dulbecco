@@ -14,7 +14,6 @@ import (
 var (
 	configFile = flag.String("config", "./config.json", "Path to the configuration file")
 	markovDb   = flag.String("mdb", "./markov-db", "Path to the directory containing the Markov DB")
-	importDb   = flag.Bool("import", false, "Enable import mode")
 	importFile = flag.String("train", "", "Train with a IRC log file")
 )
 
@@ -23,16 +22,6 @@ const markovOrder = 2
 func main() {
 	flag.Parse()
 
-	if *importDb {
-		markov.ReadStdin(*markovDb, markovOrder)
-		return
-	} else if *importFile != "" {
-		if err := markov.ReadFile(*markovDb, *importFile, markovOrder); err != nil {
-			log.Fatal(err)
-		}
-		return
-	}
-
 	config, err := dulbecco.ReadConfig(*configFile)
 	if err != nil {
 		log.Fatal("Error with configuration file: ", err)
@@ -40,7 +29,14 @@ func main() {
 
 	mdb, err := markov.NewMarkovDB(2, *markovDb)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Cannot open MarkoDB: ", err)
+	}
+
+	if *importFile != "" {
+		if err := mdb.LearnFromFile(*markovDb, *importFile, markovOrder); err != nil {
+			log.Fatal(err)
+		}
+		os.Exit(0)
 	}
 
 	// start Hipchat handler

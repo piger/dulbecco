@@ -14,7 +14,7 @@ var defaultReplies []string
 
 type Configuration struct {
 	Servers []ServerConfiguration `toml:"server"`
-	Plugins []PluginConfiguration
+	Plugins []PluginConfiguration `toml:"plugin"`
 	Replies []string
 	Hipchat HipchatConfiguration
 }

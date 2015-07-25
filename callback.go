@@ -63,19 +63,16 @@ func (c *Connection) SetupCallbacks(plugins []PluginConfiguration) {
 // We use a separate method because we need a "copy" of the "plugin" variable,
 // since it will be bound inside the closure.
 func (c *Connection) addPluginCallback(plugin PluginConfiguration) {
-	// "trigger" contains a regular expression with optional capture groups
-	// command is a text/template that can contain captures from the trigger
-	// regexp.
-	re := regexp.MustCompile(plugin.Trigger)
-
-	cmdtpl, err := template.New("cmd").Parse(plugin.Command)
-	if err != nil {
-		log.Fatalf("Cannot parse template for plugin %s: %s", plugin.Name, err)
-	}
-
 	// this is the actual plugin callback
 	c.AddCallback("PRIVMSG", func(message *Message) {
-		arg1, _ := message.Arg(1)
+		// "trigger" contains a regular expression with optional capture groups
+		// command is a text/template that can contain captures from the trigger
+		// regexp.
+		re := regexp.MustCompile(plugin.Trigger)
+		arg1, err := message.Arg(1)
+		if err != nil {
+			return
+		}
 		match := re.FindStringSubmatch(arg1)
 		if match == nil {
 			return
@@ -87,7 +84,11 @@ func (c *Connection) addPluginCallback(plugin PluginConfiguration) {
 			}
 			captures[name] = match[i]
 		}
-
+		cmdtpl, err := template.New("cmd").Parse(plugin.Command)
+		if err != nil {
+			log.Printf("Cannot parse template: %s\n", err)
+			return
+		}
 		var cmdbuf bytes.Buffer
 		if err := cmdtpl.Execute(&cmdbuf, captures); err != nil {
 			log.Print("Cannot execute template: ", err)

@@ -178,7 +178,7 @@ func (c *Connection) h_433(message *Message) {
 func (c *Connection) h_PING(message *Message) {
 	ping, err := message.Arg(0)
 	if err != nil {
-		log.Print("Invalid PING message: ", message.Raw)
+		log.Printf("Invalid PING message: %s (%s)", err, message)
 		return
 	}
 	c.Raw("PONG " + ping)
@@ -187,12 +187,12 @@ func (c *Connection) h_PING(message *Message) {
 func (c *Connection) h_PONG(message *Message) {
 	ping, err := message.Arg(0)
 	if err != nil {
-		log.Print("Invalid PONG message: ", message.Raw)
+		log.Printf("Invalid PONG message: %s (%s)", err, message)
 		return
 	}
 	theirTime, err := strconv.ParseInt(ping, 10, 64)
 	if err != nil {
-		log.Print("Invalind PING value: ", message.Raw)
+		log.Printf("Invalind PONG value: %s (%s)", err, message)
 		return
 	}
 	delta := time.Duration(time.Now().UnixNano() - theirTime)

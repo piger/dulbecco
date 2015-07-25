@@ -27,6 +27,17 @@ type Message struct {
 	Time     time.Time
 }
 
+func (m *Message) GetFrom() string {
+	if m.Nick != "" {
+		return fmt.Sprintf("%s!%s@%s", m.Nick, m.Ident, m.Host)
+	}
+	return m.Src
+}
+
+func (m *Message) String() string {
+	return fmt.Sprintf("<Message(From=%s, Cmd=%q, Args=%q, Time=%s)>", m.GetFrom(), m.Cmd, m.Args, m.Time)
+}
+
 func (m *Message) Arg(i int) (string, error) {
 	if i >= len(m.Args) {
 		return "", fmt.Errorf("Argument %d not found", i)

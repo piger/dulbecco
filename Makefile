@@ -11,7 +11,6 @@ dulbecco: *.go cmd/dulbecco/dulbecco.go markov/*.go
 clean:
 	-rm dulbecco
 	-rm quotes-plugin
-	-rm convert-db
 
 install:
 	go install ./...

@@ -2,6 +2,7 @@ package dulbecco
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/piger/dulbecco/markov"
 	"io"
@@ -20,7 +21,28 @@ type HipchatRequest struct {
 }
 
 func (hcr *HipchatRequest) GetRoomMessage() string {
-	return hcr.Item.Message.Message
+	if hcr.Item != nil {
+		if hcr.Item.Message != nil {
+			return hcr.Item.Message.Message
+		}
+	}
+	return ""
+}
+
+func (hcr *HipchatRequest) GetMentionName() string {
+	if hcr.Item != nil {
+		if hcr.Item.Message != nil {
+			if hcr.Item.Message.From != nil {
+				return hcr.Item.Message.From.MentionName
+			}
+		}
+	}
+	return ""
+}
+
+func (hcr *HipchatRequest) String() string {
+	s := fmt.Sprintf("<HipchatRequest(From=%s, Message=%s)>", hcr.GetMentionName(), hcr.GetRoomMessage())
+	return s
 }
 
 type HipchatItem struct {
@@ -147,6 +169,12 @@ func talkHandler(w http.ResponseWriter, r *vRequest) {
 			reply = GetRandomReply()
 		}
 	}
+
+	from := r.HCRequest.GetMentionName()
+	if from != "" {
+		reply = fmt.Sprintf("%s %s", from, reply)
+	}
+
 	resp := NewCommandResponse(reply)
 	sendJSONResponse(w, resp)
 }

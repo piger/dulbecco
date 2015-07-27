@@ -173,7 +173,7 @@ func talkHandler(w http.ResponseWriter, r *vRequest) {
 	// if we got a MentionName let's use it
 	from := r.HCRequest.GetMentionName()
 	if from != "" {
-		reply = fmt.Sprintf("@%s: %s", from, reply)
+		reply = fmt.Sprintf("@%s %s", from, reply)
 	}
 
 	resp := NewCommandResponse(reply)
